@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
 import 'screens/home_screen.dart';
 import 'utils/constants.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,7 +11,6 @@ void main() async {
   // Get available cameras
   final cameras = await availableCameras();
   final firstCamera = cameras.first;
-
   runApp(VeriScanProApp(camera: firstCamera));
 }
 
