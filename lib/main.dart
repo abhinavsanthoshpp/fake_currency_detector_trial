@@ -4,10 +4,11 @@ import 'package:camera/camera.dart';
 import 'screens/home_screen.dart';
 import 'utils/constants.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'database/database_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
+  await DatabaseService.init();
   // Get available cameras
   final cameras = await availableCameras();
   final firstCamera = cameras.first;

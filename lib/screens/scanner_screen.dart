@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import '../utils/constants.dart';
 import './results_screen.dart';
-import 'home_screen.dart'; // keep for fallback if needed
+import 'home_screen.dart';
+import '../database/database_service.dart';
+import '../database/scan_result.dart';
 
 class ScannerScreen extends StatefulWidget {
   final CameraDescription? camera;
-  final VoidCallback? onBack; // called when back pressed
-  final ValueChanged<String>? onCaptured; // called with image path when capture
+  final VoidCallback? onBack;
+  final ValueChanged<String>? onCaptured;
 
   const ScannerScreen({Key? key, this.camera, this.onBack, this.onCaptured})
       : super(key: key);
@@ -48,6 +50,50 @@ class _ScannerScreenState extends State<ScannerScreen> {
     super.dispose();
   }
 
+  Future<void> _processScanResult(String imagePath) async {
+    // Simulate detection process
+    await Future.delayed(const Duration(seconds: 2));
+
+    // Simulate random detection results
+    final List<String> currencies = [
+      'INR ₹100',
+      'INR ₹200',
+      'INR ₹500',
+      'INR ₹2000'
+    ];
+    final List<String> statuses = ['Authentic', 'Suspicious'];
+    final List<double> confidences = [0.987, 0.654, 0.923, 0.889, 0.991];
+
+    final random = DateTime.now().millisecond;
+    final currency = currencies[random % currencies.length];
+    final status = statuses[random % statuses.length];
+    final confidence = confidences[random % confidences.length];
+
+    // Create and save scan result
+    final scanResult = ScanResult(
+      currencyType: currency,
+      resultStatus: status,
+      confidenceLevel: confidence,
+      dateTime: DateTime.now(),
+      imagePath: imagePath,
+    );
+
+    await DatabaseService.addScanResult(scanResult);
+
+    // Show success message
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Scan saved: $currency - $status'),
+          backgroundColor: status == 'Authentic'
+              ? AppColors.successGreen
+              : AppColors.errorRed,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
@@ -61,10 +107,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Camera preview only
+          // Camera preview
           CameraPreview(_controller),
 
-          // Top-left back button on black background
+          // Back button
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 8,
@@ -73,7 +119,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
                 onPressed: () {
                   if (widget.onBack != null) {
-                    widget.onBack!(); // return to Home tab
+                    widget.onBack!();
                     return;
                   }
                   if (Navigator.of(context).canPop()) {
@@ -93,7 +139,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
             ),
           ),
 
-          // Only one capture button (bottom center)
+          // Capture button
           Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
@@ -101,28 +147,42 @@ class _ScannerScreenState extends State<ScannerScreen> {
               child: FloatingActionButton(
                 heroTag: 'captureButton',
                 backgroundColor: AppColors.primaryBlue,
-                child: const Icon(Icons.camera_alt, size: 28),
+                child:
+                    const Icon(Icons.camera_alt, size: 28, color: Colors.white),
                 onPressed: () async {
                   try {
                     final image = await _controller.takePicture();
                     if (!mounted) return;
 
-                    // If parent provided onCaptured, use it so ResultsScreen shows inside HomeScreen
+                    // Process and save scan result
+                    await _processScanResult(image.path);
+
+                    // Navigate to results screen
                     if (widget.onCaptured != null) {
                       widget.onCaptured!(image.path);
                       return;
                     }
 
-                    // Fallback: push results route (legacy behavior)
+                    // Fallback: push results route
                     await Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            ResultsScreen(imagePath: image.path),
+                        builder: (context) => ResultsScreen(
+                          imagePath: image.path,
+                          onBack: widget.onBack,
+                        ),
                       ),
                     );
                   } catch (e) {
                     debugPrint('Error taking picture: $e');
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Error taking picture'),
+                          backgroundColor: AppColors.errorRed,
+                        ),
+                      );
+                    }
                   }
                 },
               ),

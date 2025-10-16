@@ -1,96 +1,176 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../utils/constants.dart';
+import '../database/database_service.dart';
+import '../database/scan_result.dart';
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
 
+  @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppStrings.scanHistory),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          _buildHistoryItem(
-            currency: 'INR \100',
-            date: 'Today, 10:22 AM',
-            status: AppStrings.authentic,
-            isAuthentic: true,
-          ),
-          const SizedBox(height: 12),
-          _buildHistoryItem(
-            currency: 'INR ₹200',
-            date: 'Yesterday, 6:40 PM',
-            status: AppStrings.suspicious,
-            isAuthentic: false,
-          ),
-          const SizedBox(height: 12),
-          _buildHistoryItem(
-            currency: 'INR ₹500',
-            date: 'Yesterday, 2:15 PM',
-            status: AppStrings.authentic,
-            isAuthentic: true,
-          ),
-          const SizedBox(height: 12),
-          _buildHistoryItem(
-            currency: 'INR ₹2000',
-            date: 'Oct 12, 11:30 AM',
-            status: AppStrings.authentic,
-            isAuthentic: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_sweep),
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Clear All History'),
+                  content: const Text(
+                      'Are you sure you want to delete all scan history?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancel'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Clear All',
+                          style: TextStyle(color: AppColors.errorRed)),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                await DatabaseService.clearAllResults();
+                setState(() {});
+              }
+            },
           ),
         ],
+      ),
+      body: FutureBuilder<List<ScanResult>>(
+        future: Future.value(DatabaseService.getAllScanResults()),
+        builder: (context, snapshot) {
+          final results = snapshot.data ?? [];
+
+          if (results.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.history, size: 64, color: AppColors.textGray),
+                  SizedBox(height: 16),
+                  Text(
+                    'No scan history yet',
+                    style: TextStyle(fontSize: 18, color: AppColors.textGray),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Start scanning currency to see history',
+                    style: TextStyle(color: AppColors.textGray),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: results.length,
+            itemBuilder: (context, index) {
+              final result = results[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _buildHistoryItem(result),
+              );
+            },
+          );
+        },
       ),
     );
   }
 
-  Widget _buildHistoryItem({
-    required String currency,
-    required String date,
-    required String status,
-    required bool isAuthentic,
-  }) {
+  Widget _buildHistoryItem(ScanResult result) {
+    final isAuthentic = result.resultStatus == 'Authentic';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.1),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
+          // Image or icon
           Container(
-            width: 48,
-            height: 48,
+            width: 60,
+            height: 60,
             decoration: BoxDecoration(
-              color: isAuthentic
-                  ? AppColors.successGreenLight
-                  : AppColors.errorRedLight,
-              shape: BoxShape.circle,
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.grey[200],
             ),
-            child: Icon(
-              isAuthentic ? Icons.check_circle : Icons.warning_amber,
-              color: isAuthentic ? AppColors.successGreen : AppColors.errorRed,
-            ),
+            child:
+                result.imagePath != null && File(result.imagePath!).existsSync()
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(result.imagePath!),
+                          fit: BoxFit.cover,
+                        ),
+                      )
+                    : Icon(
+                        Icons.monetization_on,
+                        size: 30,
+                        color: isAuthentic
+                            ? AppColors.successGreen
+                            : AppColors.errorRed,
+                      ),
           ),
+
           const SizedBox(width: 16),
+
+          // Details
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  currency,
+                  result.currencyType,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w500),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  date,
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  result.formattedDate,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textGray,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Confidence: ${(result.confidenceLevel * 100).toStringAsFixed(1)}%',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textGray,
+                  ),
                 ),
               ],
             ),
           ),
+
+          // Status badge
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -100,11 +180,12 @@ class HistoryScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
-              status,
+              result.resultStatus,
               style: TextStyle(
                 color:
                     isAuthentic ? AppColors.successGreen : AppColors.errorRed,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
               ),
             ),
           ),

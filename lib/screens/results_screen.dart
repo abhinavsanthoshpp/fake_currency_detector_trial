@@ -1,89 +1,177 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
+import 'dart:io';
 import '../utils/constants.dart';
-import 'scanner_screen.dart';
+import '../database/database_service.dart';
+import '../database/scan_result.dart';
 
-class ResultsScreen extends StatelessWidget {
-  final String imagePath;
-  final VoidCallback? onBack;
+class ResultsScreen extends StatefulWidget {
+  final String? imagePath;
+  final VoidCallback? onBack; // ADD THIS
 
-  // make imagePath optional with default empty string so callers can use ResultsScreen()
-  const ResultsScreen({super.key, this.imagePath = '', this.onBack});
+  const ResultsScreen({Key? key, this.imagePath, this.onBack})
+      : super(key: key);
+
+  @override
+  State<ResultsScreen> createState() => _ResultsScreenState();
+}
+
+class _ResultsScreenState extends State<ResultsScreen> {
+  ScanResult? latestScan;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadLatestScan();
+  }
+
+  Future<void> _loadLatestScan() async {
+    try {
+      final scans = DatabaseService.getAllScanResults();
+      if (scans.isNotEmpty) {
+        setState(() {
+          latestScan = scans.first; // Most recent scan
+          isLoading = false;
+        });
+      } else {
+        // Fallback demo data
+        setState(() {
+          latestScan = ScanResult(
+            currencyType: 'INR ₹500',
+            resultStatus: 'Authentic',
+            confidenceLevel: 0.986,
+            dateTime: DateTime.now(),
+            imagePath: widget.imagePath,
+          );
+          isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final scan = latestScan!;
+    final isAuthentic = scan.resultStatus == 'Authentic';
+
     return Scaffold(
+      backgroundColor: AppColors.backgroundColor,
       appBar: AppBar(
-        title: const Text(AppStrings.scanResults),
+        title: const Text('Scan Results'),
+        backgroundColor: Colors.white,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            if (onBack != null) {
-              onBack!();
-              return;
+            if (widget.onBack != null) {
+              widget.onBack!();
+            } else {
+              Navigator.of(context).pop();
             }
-            // fallback to previous behavior
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const ScannerScreen()),
-            );
           },
         ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ✅ Display captured image
-            if (imagePath.isNotEmpty)
+            // Image preview (if available)
+            if (widget.imagePath != null) ...[
               Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                height: 250,
+                height: 200,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.shade300),
+                  color: Colors.grey[200],
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.file(
-                    File(imagePath),
-                    fit: BoxFit.cover,
-                  ),
+                  child: File(widget.imagePath!).existsSync()
+                      ? Image.file(
+                          File(widget.imagePath!),
+                          fit: BoxFit.cover,
+                        )
+                      : const Icon(Icons.image, size: 50, color: Colors.grey),
                 ),
               ),
+              const SizedBox(height: 20),
+            ],
 
+            // Result banner
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isAuthentic
+                    ? AppColors.successGreenLight
+                    : AppColors.errorRedLight,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    isAuthentic ? Icons.verified : Icons.warning,
+                    size: 48,
+                    color: isAuthentic
+                        ? AppColors.successGreen
+                        : AppColors.errorRed,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    scan.resultStatus,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: isAuthentic
+                          ? AppColors.successGreen
+                          : AppColors.errorRed,
+                    ),
+                  ),
+                  Text(
+                    scan.currencyType,
+                    style: const TextStyle(
+                        fontSize: 18, color: AppColors.textGray),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Confidence level
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.successGreenLight,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.verified,
-                      color: AppColors.successGreen, size: 32),
+                  const Icon(Icons.trending_up, color: AppColors.primaryBlue),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          AppStrings.authenticBanknote,
+                          'Confidence Level',
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.successGreen,
-                          ),
+                              fontSize: 16, fontWeight: FontWeight.w500),
                         ),
-                        const SizedBox(height: 4),
                         Text(
-                          'INR 100 • Series 2017 • Detected in 2.8s',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[700],
-                          ),
+                          '${(scan.confidenceLevel * 100).toStringAsFixed(1)}%',
+                          style: const TextStyle(
+                              fontSize: 14, color: AppColors.textGray),
                         ),
                       ],
                     ),
@@ -91,94 +179,76 @@ class ResultsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildResultMetric('Confidence', '98.6%'),
-                _buildResultMetric('Checks Passed', '12/13'),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              AppStrings.securityFeaturesVerified,
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+
             const SizedBox(height: 16),
-            _buildSecurityFeature('Watermark',
-                'Benjamin Franklin portrait clearly visible', true),
-            _buildSecurityFeature(
-                'Security Thread', 'UV-reactive strip detected', true),
-            _buildSecurityFeature(
-                'Color-Shifting Ink', 'Numeral 100 changes color', true),
-            _buildSecurityFeature(
-                'Microprinting', 'Clear and legible under magnification', true),
-            _buildSecurityFeature(
-                '3D Security Ribbon', 'Bells change to 100s when tilted', true),
+
+            // Scan details
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  _buildDetailRow('Scanned', scan.formattedDate),
+                  const Divider(),
+                  _buildDetailRow('Currency', scan.currencyType),
+                  const Divider(),
+                  _buildDetailRow('Status', scan.resultStatus),
+                ],
+              ),
+            ),
+
             const SizedBox(height: 24),
+
+            // Action button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (widget.onBack != null) {
+                    widget.onBack!();
+                  } else {
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  padding: const EdgeInsets.all(16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'Scan Another Currency',
+                  style: TextStyle(fontSize: 16, color: Colors.white),
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildResultMetric(String title, String value) {
-    return Column(
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
       children: [
-        Text(
-          title,
-          style: const TextStyle(fontSize: 14, color: Colors.grey),
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: const TextStyle(fontSize: 16, color: AppColors.textGray),
+          ),
         ),
       ],
-    );
-  }
-
-  Widget _buildSecurityFeature(String title, String description, bool passed) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            passed ? Icons.check_circle : Icons.error,
-            color: passed ? AppColors.successGreen : AppColors.errorRed,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            passed ? AppStrings.pass : AppStrings.review,
-            style: TextStyle(
-              color: passed ? AppColors.successGreen : AppColors.errorRed,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
