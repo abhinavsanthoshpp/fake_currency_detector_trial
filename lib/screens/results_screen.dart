@@ -1,13 +1,14 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
-import 'scanner_screen.dart'; // added import
+import 'scanner_screen.dart';
 
 class ResultsScreen extends StatelessWidget {
   final String imagePath;
+  final VoidCallback? onBack;
 
   // make imagePath optional with default empty string so callers can use ResultsScreen()
-  const ResultsScreen({super.key, this.imagePath = ''});
+  const ResultsScreen({super.key, this.imagePath = '', this.onBack});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +18,11 @@ class ResultsScreen extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            // Navigate to scanner screen as requested
+            if (onBack != null) {
+              onBack!();
+              return;
+            }
+            // fallback to previous behavior
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const ScannerScreen()),
@@ -74,7 +79,7 @@ class ResultsScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'USD 100 • Series 2017 • Detected in 2.8s',
+                          'INR 100 • Series 2017 • Detected in 2.8s',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[700],

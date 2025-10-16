@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import '../utils/constants.dart';
 import './results_screen.dart';
+import 'home_screen.dart'; // keep for fallback if needed
 
 class ScannerScreen extends StatefulWidget {
   final CameraDescription? camera;
-  const ScannerScreen({Key? key, this.camera}) : super(key: key);
+  final VoidCallback? onBack; // called when back pressed
+  final ValueChanged<String>? onCaptured; // called with image path when capture
+
+  const ScannerScreen({Key? key, this.camera, this.onBack, this.onCaptured})
+      : super(key: key);
 
   @override
   _ScannerScreenState createState() => _ScannerScreenState();
@@ -66,7 +71,24 @@ class _ScannerScreenState extends State<ScannerScreen> {
             child: SafeArea(
               child: IconButton(
                 icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.of(context).maybePop(),
+                onPressed: () {
+                  if (widget.onBack != null) {
+                    widget.onBack!(); // return to Home tab
+                    return;
+                  }
+                  if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                    return;
+                  }
+                  if (widget.camera != null) {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => HomeScreen(camera: widget.camera!),
+                      ),
+                    );
+                  }
+                },
               ),
             ),
           ),
@@ -78,17 +100,26 @@ class _ScannerScreenState extends State<ScannerScreen> {
               padding: const EdgeInsets.only(bottom: 32.0),
               child: FloatingActionButton(
                 heroTag: 'captureButton',
-                backgroundColor: Colors.green, // your capture color
+                backgroundColor: AppColors.primaryBlue,
                 child: const Icon(Icons.camera_alt, size: 28),
                 onPressed: () async {
                   try {
                     final image = await _controller.takePicture();
                     if (!mounted) return;
+
+                    // If parent provided onCaptured, use it so ResultsScreen shows inside HomeScreen
+                    if (widget.onCaptured != null) {
+                      widget.onCaptured!(image.path);
+                      return;
+                    }
+
+                    // Fallback: push results route (legacy behavior)
                     await Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                          builder: (context) =>
-                              ResultsScreen(imagePath: image.path)),
+                        builder: (context) =>
+                            ResultsScreen(imagePath: image.path),
+                      ),
                     );
                   } catch (e) {
                     debugPrint('Error taking picture: $e');

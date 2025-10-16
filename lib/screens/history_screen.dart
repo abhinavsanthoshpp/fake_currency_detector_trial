@@ -14,14 +14,14 @@ class HistoryScreen extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         children: [
           _buildHistoryItem(
-            currency: 'USD \$100',
+            currency: 'INR \100',
             date: 'Today, 10:22 AM',
             status: AppStrings.authentic,
             isAuthentic: true,
           ),
           const SizedBox(height: 12),
           _buildHistoryItem(
-            currency: 'EUR €50',
+            currency: 'INR ₹200',
             date: 'Yesterday, 6:40 PM',
             status: AppStrings.suspicious,
             isAuthentic: false,
@@ -35,7 +35,7 @@ class HistoryScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           _buildHistoryItem(
-            currency: 'GBP £20',
+            currency: 'INR ₹2000',
             date: 'Oct 12, 11:30 AM',
             status: AppStrings.authentic,
             isAuthentic: true,
@@ -63,7 +63,9 @@ class HistoryScreen extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: isAuthentic ? AppColors.successGreenLight : AppColors.errorRedLight,
+              color: isAuthentic
+                  ? AppColors.successGreenLight
+                  : AppColors.errorRedLight,
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -78,7 +80,8 @@ class HistoryScreen extends StatelessWidget {
               children: [
                 Text(
                   currency,
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                  style: const TextStyle(
+                      fontSize: 16, fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -91,13 +94,16 @@ class HistoryScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: isAuthentic ? AppColors.successGreenLight : AppColors.errorRedLight,
+              color: isAuthentic
+                  ? AppColors.successGreenLight
+                  : AppColors.errorRedLight,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
               status,
               style: TextStyle(
-                color: isAuthentic ? AppColors.successGreen : AppColors.errorRed,
+                color:
+                    isAuthentic ? AppColors.successGreen : AppColors.errorRed,
                 fontWeight: FontWeight.w500,
               ),
             ),

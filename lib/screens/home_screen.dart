@@ -4,6 +4,7 @@ import '../utils/constants.dart';
 import '../widgets/home_content.dart';
 import 'scanner_screen.dart';
 import 'history_screen.dart';
+import 'results_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final CameraDescription camera;
@@ -15,43 +16,65 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _currentIndex = 0;
+  int _tabIndex = 0; // bottom nav index (0..2)
+  bool _showResult = false; // overlay result view flag
+  String _lastImagePath = ''; // captured image path
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
-      appBar: _currentIndex == 0 ? _buildAppBar() : null,
-      body: _getCurrentScreen(),
+      appBar: _tabIndex == 0 && !_showResult ? _buildAppBar() : null,
+      body: _buildBody(),
       bottomNavigationBar: _buildBottomNavBar(),
-      // Removed floatingActionButton to avoid overlapping scanner button
-      // floatingActionButton: _buildScanButton(context),
-      // floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
-  Widget _getCurrentScreen() {
-    switch (_currentIndex) {
+  Widget _buildBody() {
+    // If a result is available show results view (keeps bottom nav visible)
+    if (_showResult) {
+      return ResultsScreen(
+        imagePath: _lastImagePath,
+        onBack: () {
+          // return to scanner tab and hide result
+          setState(() {
+            _showResult = false;
+            _tabIndex = 1;
+          });
+        },
+      );
+    }
+
+    // otherwise show normal tab content
+    switch (_tabIndex) {
       case 0:
         return HomeContent(onScanPressed: () {
-          // Open scanner as a full-screen route so no overlapping FAB remains
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => ScannerScreen(camera: widget.camera)),
-          );
+          setState(() {
+            _tabIndex = 1;
+          });
         });
       case 1:
-        return const ScannerScreen(); // Removed camera parameter
+        return ScannerScreen(
+          camera: widget.camera,
+          onBack: () {
+            setState(() {
+              _tabIndex = 0;
+            });
+          },
+          onCaptured: (path) {
+            setState(() {
+              _lastImagePath = path;
+              _showResult = true;
+            });
+          },
+        );
       case 2:
         return const HistoryScreen();
       default:
         return HomeContent(onScanPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => ScannerScreen(camera: widget.camera)),
-          );
+          setState(() {
+            _tabIndex = 1;
+          });
         });
     }
   }
@@ -82,10 +105,11 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
       child: BottomNavigationBar(
-        currentIndex: _currentIndex,
+        currentIndex: _tabIndex,
         onTap: (index) {
           setState(() {
-            _currentIndex = index;
+            _tabIndex = index;
+            _showResult = false; // hide result if user switches tabs
           });
         },
         type: BottomNavigationBarType.fixed,
@@ -117,6 +141,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  // _buildScanButton removed to avoid overlapping scanner FAB
 }

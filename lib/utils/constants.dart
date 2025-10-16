@@ -15,24 +15,28 @@ class AppColors {
 
 /// App Strings
 class AppStrings {
-  static const String appTitle = 'VeriScan Pro';
-  static const String homeTitle = 'Fake Currency Detector';
-  static const String welcomeTitle = 'Welcome to VeriScan Pro';
-  static const String welcomeSubtitle = 'Verify banknotes instantly with AI-powered scanning technology';
-  static const String lightingTip = 'Ensure good lighting and align note edges for best results';
+  static const String appTitle = ' DeepScan';
+  static const String homeTitle = 'DeepScan';
+  static const String welcomeTitle = 'Welcome to DeepScan';
+  static const String welcomeSubtitle = 'verify notes using ML';
+  static const String lightingTip =
+      'Ensure good lighting and align note edges for best results';
   static const String quickActions = 'Quick Actions';
   static const String liveScanTitle = 'Live Banknote Scan';
-  static const String liveScanSubtitle = 'Real-time detection with edge guidance';
+  static const String liveScanSubtitle =
+      'Real-time detection with edge guidance';
   static const String recentScans = 'Recent scans';
   static const String viewAll = 'View all';
   static const String positionBanknote = 'Position the Banknote';
-  static const String positionInstructions = 'Align the banknote within the frame. Ensure good lighting and keep the note steady.';
+  static const String positionInstructions =
+      'Align the banknote within the frame. Ensure good lighting and keep the note steady.';
   static const String analyzingFeatures = 'Analyzing security features...';
   static const String scanAgain = 'Scan Again';
   static const String viewDetails = 'View Details';
   static const String banknoteScanner = 'Banknote Scanner';
   static const String cameraPermissionRequired = 'Camera Permission Required';
-  static const String cameraPermissionMessage = 'Please allow camera access to use the banknote scanner';
+  static const String cameraPermissionMessage =
+      'Please allow camera access to use the banknote scanner';
   static const String grantPermission = 'Grant Permission';
   static const String scanResults = 'Scan Results';
   static const String authenticBanknote = 'Authentic Banknote';
