@@ -1,11 +1,19 @@
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 import '../screens/results_screen.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../database/scan_result.dart';
+import '../screens/history_screen.dart';
 
 class HomeContent extends StatelessWidget {
   final VoidCallback onScanPressed;
+  final List<ScanResult> recentScans;
 
-  const HomeContent({super.key, required this.onScanPressed});
+  const HomeContent({
+    super.key,
+    required this.onScanPressed,
+    required this.recentScans,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +23,7 @@ class HomeContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 16),
-          _buildWelcomeSection(),
+          _buildWelcomeSection(context),
           const SizedBox(height: 24),
           _buildScanOptions(context),
           const SizedBox(height: 24),
@@ -25,7 +33,7 @@ class HomeContent extends StatelessWidget {
     );
   }
 
-  Widget _buildWelcomeSection() {
+  Widget _buildWelcomeSection(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -43,14 +51,15 @@ class HomeContent extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            AppStrings.welcomeTitle,
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+          Text(
+            AppLocalizations.of(context)!.welcomeTitle,
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
-          const Text(
-            AppStrings.welcomeSubtitle,
-            style: TextStyle(fontSize: 15, color: Colors.grey, height: 1.5),
+          Text(
+            AppLocalizations.of(context)!.welcomeSubtitle,
+            style:
+                const TextStyle(fontSize: 15, color: Colors.grey, height: 1.5),
           ),
           const SizedBox(height: 16),
           Container(
@@ -59,14 +68,16 @@ class HomeContent extends StatelessWidget {
               color: AppColors.lightBlueBackground,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.lightbulb_outline, color: AppColors.primaryBlue),
-                SizedBox(width: 8),
+                const Icon(Icons.lightbulb_outline,
+                    color: AppColors.primaryBlue),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    AppStrings.lightingTip,
-                    style: TextStyle(fontSize: 14, color: AppColors.primaryBlue),
+                    AppLocalizations.of(context)!.lightingTip,
+                    style: const TextStyle(
+                        fontSize: 14, color: AppColors.primaryBlue),
                   ),
                 ),
               ],
@@ -81,15 +92,15 @@ class HomeContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          AppStrings.quickActions,
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Text(
+          AppLocalizations.of(context)!.quickActions,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         _buildActionCard(
           icon: Icons.document_scanner,
-          title: AppStrings.liveScanTitle,
-          subtitle: AppStrings.liveScanSubtitle,
+          title: AppLocalizations.of(context)!.liveScanTitle,
+          subtitle: AppLocalizations.of(context)!.liveScanSubtitle,
           color: AppColors.primaryBlue,
           onTap: onScanPressed,
         ),
@@ -154,47 +165,97 @@ class HomeContent extends StatelessWidget {
   }
 
   Widget _buildRecentScans(BuildContext context) {
+    // Show message if no recent scans
+    if (recentScans.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppLocalizations.of(context)!.recentScans,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.history, size: 48, color: AppColors.textGray),
+                const SizedBox(height: 8),
+                Text(
+                  AppLocalizations.of(context)!.noScanHistory,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: AppColors.textGray,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  AppLocalizations.of(context)!.startScanning,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textGray,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          AppStrings.recentScans,
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Text(
+          AppLocalizations.of(context)!.recentScans,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        _buildScanItem(
-          currency: 'USD\$100',
-          time: 'Today, 10:22 AM',
-          status: AppStrings.authentic,
-          isAuthentic: true,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ResultsScreen()),
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-        _buildScanItem(
-          currency: 'EUR €50',
-          time: 'Yesterday, 6:40 PM',
-          status: AppStrings.suspicious,
-          isAuthentic: false,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ResultsScreen()),
-            );
-          },
-        ),
-        const SizedBox(height: 8),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            onPressed: () {},
-            child: const Text(AppStrings.viewAll),
+        // Dynamically show recent scans from the list (max 3 for home screen)
+        for (final scan in recentScans.take(3))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildScanItem(
+              currency: scan.currencyType,
+              time: scan.formattedDate,
+              status: scan.resultStatus,
+              isAuthentic:
+                  scan.resultStatus == AppLocalizations.of(context)!.authentic,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ResultsScreen(
+                      imagePath: scan.imagePath,
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
-        ),
+        if (recentScans.isNotEmpty)
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () {
+                // Navigate to History tab (assuming bottom nav index 2)
+                // You might need to adjust this based on your navigation setup
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const HistoryScreen()),
+                );
+              },
+              child: Text(AppLocalizations.of(context)!.viewAll),
+            ),
+          ),
       ],
     );
   }
@@ -220,12 +281,15 @@ class HomeContent extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: isAuthentic ? AppColors.successGreenLight : AppColors.errorRedLight,
+                color: isAuthentic
+                    ? AppColors.successGreenLight
+                    : AppColors.errorRedLight,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 isAuthentic ? Icons.check_circle : Icons.warning_amber,
-                color: isAuthentic ? AppColors.successGreen : AppColors.errorRed,
+                color:
+                    isAuthentic ? AppColors.successGreen : AppColors.errorRed,
               ),
             ),
             const SizedBox(width: 16),
@@ -254,13 +318,16 @@ class HomeContent extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: isAuthentic ? AppColors.successGreenLight : AppColors.errorRedLight,
+                color: isAuthentic
+                    ? AppColors.successGreenLight
+                    : AppColors.errorRedLight,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
                 status,
                 style: TextStyle(
-                  color: isAuthentic ? AppColors.successGreen : AppColors.errorRed,
+                  color:
+                      isAuthentic ? AppColors.successGreen : AppColors.errorRed,
                   fontWeight: FontWeight.w500,
                 ),
               ),

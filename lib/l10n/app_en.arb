@@ -1,0 +1,43 @@
+{
+  "@@locale": "en",
+  "homeTitle": "DeepScan",
+  "scanHistory": "Scan History",
+  "authentic": "Authentic",
+  "suspicious": "Suspicious",
+  "scanAnotherCurrency": "Scan Another Currency",
+  "scanResults": "Scan Results",
+  "confidenceLevel": "Confidence Level",
+  "scanned": "Scanned",
+  "currency": "Currency",
+  "status": "Status",
+  "clearAllHistory": "Clear All History",
+  "areYouSure": "Are you sure you want to delete all scan history?",
+  "cancel": "Cancel",
+  "clearAll": "Clear All",
+  "noScanHistory": "No scan history yet",
+  "startScanning": "Start scanning currency to see history",
+  "scanSaved": "Scan saved: {currency} - {status}",
+  "@scanSaved": {
+    "placeholders": {
+      "currency": {"type": "String"},
+      "status": {"type": "String"}
+    }
+  },
+  "errorTakingPicture": "Error taking picture",
+  "settings": "Settings",
+  "language": "Language",
+  "support": "Support",
+  "help": "Help",
+  "about": "About",
+  "home": "Home",
+  "scan": "Scan",
+  "history": "History",
+  "welcomeTitle": "Welcome to DeepScan",
+  "welcomeSubtitle": "verify notes using ml",
+  "lightingTip":"Ensure good lighting and align note edges for best results",
+  "viewAll":"View all",
+  "recentScans": "Recent Scans",
+  "liveScanSubtitle": "Real-time detection with edge guidance",
+  "liveScanTitle": "Live Banknote Scan",
+  "quickActions":"Quick Actions"
+}

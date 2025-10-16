@@ -5,6 +5,9 @@ import '../widgets/home_content.dart';
 import 'scanner_screen.dart';
 import 'history_screen.dart';
 import 'results_screen.dart';
+import 'settings_screen.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../database/database_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final CameraDescription camera;
@@ -48,17 +51,22 @@ class _HomeScreenState extends State<HomeScreen> {
     // otherwise show normal tab content
     switch (_tabIndex) {
       case 0:
-        return HomeContent(onScanPressed: () {
-          setState(() {
-            _tabIndex = 1;
-          });
-        });
+        final recentScansList = DatabaseService.getAllScanResults();
+        return HomeContent(
+          onScanPressed: () {
+            setState(() {
+              _tabIndex = 1;
+            });
+          },
+          recentScans: recentScansList, // Pass recent scans here
+        );
       case 1:
         return ScannerScreen(
           camera: widget.camera,
           onBack: () {
             setState(() {
               _tabIndex = 0;
+              _showResult = false;
             });
           },
           onCaptured: (path) {
@@ -71,22 +79,34 @@ class _HomeScreenState extends State<HomeScreen> {
       case 2:
         return const HistoryScreen();
       default:
-        return HomeContent(onScanPressed: () {
-          setState(() {
-            _tabIndex = 1;
-          });
-        });
+        final recentScansList = DatabaseService.getAllScanResults();
+        return HomeContent(
+          onScanPressed: () {
+            setState(() {
+              _tabIndex = 1;
+            });
+          },
+          recentScans: recentScansList, // Pass recent scans here
+        );
     }
   }
 
   AppBar _buildAppBar() {
     return AppBar(
-      title: const Text(AppStrings.homeTitle),
+      title: Text(AppLocalizations.of(context)!.homeTitle),
       centerTitle: false,
       actions: [
         IconButton(
-          icon: const Icon(Icons.notifications_none),
-          onPressed: () {},
+          icon: const Icon(
+              Icons.settings), // changed from notifications_none to settings
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const SettingsScreen(),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -121,21 +141,21 @@ class _HomeScreenState extends State<HomeScreen> {
             const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
         unselectedLabelStyle:
             const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-        items: const [
+        items: [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Home',
+            icon: const Icon(Icons.home_outlined),
+            activeIcon: const Icon(Icons.home),
+            label: AppLocalizations.of(context)!.home,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.document_scanner_outlined),
-            activeIcon: Icon(Icons.document_scanner),
-            label: 'Scan',
+            icon: const Icon(Icons.document_scanner_outlined),
+            activeIcon: const Icon(Icons.document_scanner),
+            label: AppLocalizations.of(context)!.scan,
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.history_outlined),
-            activeIcon: Icon(Icons.history),
-            label: 'History',
+            icon: const Icon(Icons.history_outlined),
+            activeIcon: const Icon(Icons.history),
+            label: AppLocalizations.of(context)!.history,
           ),
         ],
       ),
