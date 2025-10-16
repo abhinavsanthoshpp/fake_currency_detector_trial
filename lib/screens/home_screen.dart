@@ -24,8 +24,9 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: _currentIndex == 0 ? _buildAppBar() : null,
       body: _getCurrentScreen(),
       bottomNavigationBar: _buildBottomNavBar(),
-      floatingActionButton: _buildScanButton(context),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      // Removed floatingActionButton to avoid overlapping scanner button
+      // floatingActionButton: _buildScanButton(context),
+      // floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 
@@ -33,19 +34,24 @@ class _HomeScreenState extends State<HomeScreen> {
     switch (_currentIndex) {
       case 0:
         return HomeContent(onScanPressed: () {
-          setState(() {
-            _currentIndex = 1; // Switch to scanner screen
-          });
+          // Open scanner as a full-screen route so no overlapping FAB remains
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => ScannerScreen(camera: widget.camera)),
+          );
         });
       case 1:
-        return ScannerScreen(camera: widget.camera);
+        return const ScannerScreen(); // Removed camera parameter
       case 2:
         return const HistoryScreen();
       default:
         return HomeContent(onScanPressed: () {
-          setState(() {
-            _currentIndex = 1; // Switch to scanner screen
-          });
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (context) => ScannerScreen(camera: widget.camera)),
+          );
         });
     }
   }
@@ -87,8 +93,10 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         selectedItemColor: AppColors.primaryBlue,
         unselectedItemColor: AppColors.textGray,
-        selectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-        unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        selectedLabelStyle:
+            const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        unselectedLabelStyle:
+            const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined),
@@ -110,28 +118,5 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildScanButton(BuildContext context) {
-    // Only show the FAB on the home screen
-    if (_currentIndex != 0) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      child: FloatingActionButton(
-        onPressed: () {
-          setState(() {
-            _currentIndex = 1; // Switch to scanner screen
-          });
-        },
-        backgroundColor: AppColors.primaryBlue,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: const Icon(Icons.document_scanner, size: 26),
-      ),
-    );
-  }
+  // _buildScanButton removed to avoid overlapping scanner FAB
 }

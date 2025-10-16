@@ -45,6 +45,11 @@ class VeriScanProApp extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
+        // Add this to customize FloatingActionButton
+        floatingActionButtonTheme: FloatingActionButtonThemeData(
+          backgroundColor: Colors.white,
+          foregroundColor: AppColors.textDark,
+        ),
       ),
       home: HomeScreen(camera: camera),
     );
