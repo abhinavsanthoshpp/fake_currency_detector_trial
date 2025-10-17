@@ -212,14 +212,154 @@ class _SettingsScreenState extends State<SettingsScreen> {
   // Keep your existing dialog methods but add localizations parameter
   void _showSupportDialog(
       BuildContext context, AppLocalizations localizations) {
-    // Same implementation as before
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.support_agent, color: AppColors.primaryBlue),
+            const SizedBox(width: 8),
+            Text(localizations.support),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'Need help with DeepScan?',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 12),
+            Text('📧 Email: abhinavsanthoshpp@gmail.com'),
+            SizedBox(height: 8),
+            Text('📞 Phone: +91 7907646525'),
+            SizedBox(height: 8),
+            Text('🕒 Support Hours: 9 AM - 6 PM (IST)'),
+            SizedBox(height: 12),
+            Text(
+              'Our team usually responds within 24 hours using email or phone support.',
+              style: TextStyle(color: AppColors.textGray, fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showHelpDialog(BuildContext context, AppLocalizations localizations) {
-    // Same implementation as before
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.help_outline, color: AppColors.primaryBlue),
+            const SizedBox(width: 8),
+            Text(localizations.help),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'How to use DeepScan:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 12),
+            Text('1. Tap "Scan" to open the camera.'),
+            SizedBox(height: 6),
+            Text('2. Align the currency note inside the frame.'),
+            SizedBox(height: 6),
+            Text('3. Based on instruction capture the input'),
+            SizedBox(height: 6),
+            Text('4. Review results and save scans.'),
+            SizedBox(height: 12),
+            Text(
+              'Tips for better results:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 8),
+            Text('• Ensure good lighting conditions.'),
+            SizedBox(height: 4),
+            Text('• Keep the currency note flat and steady.'),
+            SizedBox(height: 4),
+            Text('• Avoid glare and reflections when scanning.'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Got it'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showAboutDialog(BuildContext context, AppLocalizations localizations) {
-    // Same implementation as before
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline, color: AppColors.primaryBlue),
+            const SizedBox(width: 8),
+            Text(localizations.about),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text(
+              'DeepScan',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primaryBlue,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text('Version: 1.0.0'),
+            SizedBox(height: 8),
+            Text('Build: 2025.10.17'),
+            SizedBox(height: 16),
+            Text(
+              'DeepScan is a secure and advanced currency authenticity scanning app powered by AI.',
+              style: TextStyle(color: AppColors.textGray),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Developed by:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 4),
+            Text('• Abhinav Santhosh'),
+            Text('• Abhiram K'),
+            SizedBox(height: 16),
+            Text(
+              '© 2025 DeepScan. All rights reserved.',
+              style: TextStyle(
+                fontSize: 12,
+                color: AppColors.textGray,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 }
