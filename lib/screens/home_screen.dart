@@ -67,6 +67,7 @@ class _HomeScreenState extends State<HomeScreen>
         final recentScansList = DatabaseService.getAllScanResults();
         return HomeContent(
           onScanPressed: () {
+            if (!mounted) return;
             setState(() {
               _tabIndex = 1;
             });
@@ -77,12 +78,14 @@ class _HomeScreenState extends State<HomeScreen>
         return ScannerScreen(
           camera: widget.camera,
           onBack: () {
+            if (!mounted) return;
             setState(() {
               _tabIndex = 0;
               _showResult = false;
             });
           },
           onCaptured: (path) {
+            if (!mounted) return;
             setState(() {
               _lastImagePath = path;
               _showResult = true;
@@ -96,6 +99,7 @@ class _HomeScreenState extends State<HomeScreen>
         final recentScansList = DatabaseService.getAllScanResults();
         return HomeContent(
           onScanPressed: () {
+            if (!mounted) return;
             setState(() {
               _tabIndex = 1;
             });
@@ -111,6 +115,7 @@ class _HomeScreenState extends State<HomeScreen>
       child: ResultsScreen(
         imagePath: _lastImagePath,
         onBack: () {
+          if (!mounted) return;
           setState(() {
             _showResult = false;
             _tabIndex = 1;
@@ -153,6 +158,7 @@ class _HomeScreenState extends State<HomeScreen>
       child: BottomNavigationBar(
         currentIndex: _tabIndex,
         onTap: (index) {
+          if (!mounted) return;
           setState(() {
             _tabIndex = index;
             _showResult = false; // hide result if user switches tabs
