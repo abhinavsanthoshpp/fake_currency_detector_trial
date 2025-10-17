@@ -9,6 +9,7 @@ import 'utils/constants.dart';
 import 'database/database_service.dart';
 import 'providers/locale_provider.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'screens/welcome_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,13 +24,20 @@ void main() async {
   final cameras = await availableCameras();
   final firstCamera = cameras.first;
 
-  runApp(VeriScanProApp(camera: firstCamera));
+  runApp(
+    VeriScanProApp(
+      camera: firstCamera,
+    ),
+  );
 }
 
 class VeriScanProApp extends StatelessWidget {
   final CameraDescription camera;
 
-  const VeriScanProApp({super.key, required this.camera});
+  const VeriScanProApp({
+    super.key,
+    required this.camera,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -45,10 +53,8 @@ class VeriScanProApp extends StatelessWidget {
       child: Consumer<LocaleProvider>(
         builder: (context, localeProvider, child) {
           return MaterialApp(
-            title: 'VeriScan Pro',
+            title: 'DeepScan',
             debugShowCheckedModeBanner: false,
-
-            // Localization
             localizationsDelegates: const [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
@@ -61,7 +67,6 @@ class VeriScanProApp extends StatelessWidget {
               Locale('te'),
             ],
             locale: localeProvider.locale,
-
             theme: ThemeData(
               primaryColor: AppColors.primaryBlue,
               scaffoldBackgroundColor: AppColors.backgroundColor,
@@ -81,7 +86,19 @@ class VeriScanProApp extends StatelessWidget {
                 foregroundColor: AppColors.textDark,
               ),
             ),
-            home: HomeScreen(camera: camera),
+            home: Builder(
+              builder: (BuildContext context) {
+                return WelcomePage(
+                  onContinue: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => HomeScreen(camera: camera)),
+                    );
+                  },
+                );
+              },
+            ),
           );
         },
       ),

@@ -28,4 +28,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  generate: true                # ADD THIS
+  generate: true    
+  assets:
+    - assets/logo.jpg            # ADD THIS

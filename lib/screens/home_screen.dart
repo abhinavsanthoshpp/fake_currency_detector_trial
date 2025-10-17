@@ -18,37 +18,50 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   int _tabIndex = 0; // bottom nav index (0..2)
   bool _showResult = false; // overlay result view flag
   String _lastImagePath = ''; // captured image path
+
+  late final AnimationController _fadeController;
+  late final Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    // Animation controller for fade transition of result overlay
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _fadeAnimation =
+        CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
       appBar: _tabIndex == 0 && !_showResult ? _buildAppBar() : null,
-      body: _buildBody(),
+      body: Stack(
+        children: [
+          _buildBody(),
+          if (_showResult) _buildResultOverlay(),
+        ],
+      ),
       bottomNavigationBar: _buildBottomNavBar(),
     );
   }
 
   Widget _buildBody() {
-    // If a result is available show results view (keeps bottom nav visible)
-    if (_showResult) {
-      return ResultsScreen(
-        imagePath: _lastImagePath,
-        onBack: () {
-          // return to scanner tab and hide result
-          setState(() {
-            _showResult = false;
-            _tabIndex = 1;
-          });
-        },
-      );
-    }
-
-    // otherwise show normal tab content
+    // Normal tab content when result not showing
     switch (_tabIndex) {
       case 0:
         final recentScansList = DatabaseService.getAllScanResults();
@@ -58,7 +71,7 @@ class _HomeScreenState extends State<HomeScreen> {
               _tabIndex = 1;
             });
           },
-          recentScans: recentScansList, // Pass recent scans here
+          recentScans: recentScansList,
         );
       case 1:
         return ScannerScreen(
@@ -73,6 +86,7 @@ class _HomeScreenState extends State<HomeScreen> {
             setState(() {
               _lastImagePath = path;
               _showResult = true;
+              _fadeController.forward(from: 0);
             });
           },
         );
@@ -86,9 +100,24 @@ class _HomeScreenState extends State<HomeScreen> {
               _tabIndex = 1;
             });
           },
-          recentScans: recentScansList, // Pass recent scans here
+          recentScans: recentScansList,
         );
     }
+  }
+
+  Widget _buildResultOverlay() {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: ResultsScreen(
+        imagePath: _lastImagePath,
+        onBack: () {
+          setState(() {
+            _showResult = false;
+            _tabIndex = 1;
+          });
+        },
+      ),
+    );
   }
 
   AppBar _buildAppBar() {
@@ -97,14 +126,11 @@ class _HomeScreenState extends State<HomeScreen> {
       centerTitle: false,
       actions: [
         IconButton(
-          icon: const Icon(
-              Icons.settings), // changed from notifications_none to settings
+          icon: const Icon(Icons.settings),
           onPressed: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder: (context) => const SettingsScreen(),
-              ),
+              MaterialPageRoute(builder: (context) => const SettingsScreen()),
             );
           },
         ),
