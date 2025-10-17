@@ -22,12 +22,38 @@ class _ScannerScreenState extends State<ScannerScreen> {
   late CameraController _controller;
   bool _isInitialized = false;
 
+  int _popupIndex = 0;
+
+  final List<Map<String, String>> _popups = [
+    {
+      "title": "Step 1: Capture Front Side",
+      "content":
+          "1.Align the currency note well within the frame.\n2.Ensure the entire note is visible.\n3.Keep camera steady.\n4.keep note as flat as possible.\nTry to capture input in landscape mode for better results."
+    },
+    {
+      "title": "Step 2: Capture Back Side",
+      "content":
+          "1.Align the currency note well within the frame.\n2.Ensure the entire note is visible.\n3.Keep camera steady.\n4.keep note as flat as possible."
+    },
+    {
+      "title": "Step 3: Capture security thread",
+      "content":
+          "1.Keep the camer near to the security thread in low angle.\n2.Make sure whole security thread is visible.\n4.Move the camera slowly to capture the thread color change"
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
     _initializeCamera();
+
+    // Show popups sequentially once first frame is rendered
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showPopup();
+    });
   }
 
+  // Initialize camera safely
   Future<void> _initializeCamera() async {
     try {
       final cameras = await availableCameras();
@@ -37,9 +63,55 @@ class _ScannerScreenState extends State<ScannerScreen> {
       if (mounted) setState(() => _isInitialized = true);
     } catch (e) {
       debugPrint('Error initializing camera: $e');
+      // You might want to show an error UI or message here
     }
   }
 
+  // Recursive popup display with 5 seconds delay after Next pressed
+  void _showPopup() {
+    if (_popupIndex >= _popups.length) {
+      Future.delayed(const Duration(seconds: 3), _goToResult);
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: Text(_popups[_popupIndex]["title"]!),
+        content: Text(_popups[_popupIndex]["content"]!),
+        actions: [
+          TextButton(
+            child: const Text("Next"),
+            onPressed: () {
+              Navigator.of(context).pop();
+              _popupIndex++;
+
+              // Delay 5 seconds before showing next popup or going to result
+              Future.delayed(const Duration(seconds: 3), () {
+                if (mounted) _showPopup();
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Navigate to ResultsScreen (can be improved to pass image)
+  void _goToResult() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => ResultsScreen(
+          imagePath:
+              null, // You may replace with actual image path if available
+          onBack: widget.onBack,
+        ),
+      ),
+    );
+  }
+
+  // Dispose camera controller properly
   @override
   void dispose() {
     try {
@@ -50,11 +122,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
     super.dispose();
   }
 
+  // Simulate detection and save scan result with random values
   Future<void> _processScanResult(String imagePath) async {
-    // Simulate detection process
     await Future.delayed(const Duration(seconds: 2));
 
-    // Simulate random detection results
     final List<String> currencies = [
       'INR ₹100',
       'INR ₹200',
@@ -69,7 +140,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
     final status = statuses[random % statuses.length];
     final confidence = confidences[random % confidences.length];
 
-    // Create and save scan result
     final scanResult = ScanResult(
       currencyType: currency,
       resultStatus: status,
@@ -80,7 +150,6 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
     await DatabaseService.addScanResult(scanResult);
 
-    // Show success message
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -94,6 +163,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     }
   }
 
+  // Build camera preview and UI
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized) {
@@ -107,10 +177,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // Camera preview
           CameraPreview(_controller),
-
-          // Back button
           Positioned(
             top: MediaQuery.of(context).padding.top + 8,
             left: 8,
@@ -138,12 +205,11 @@ class _ScannerScreenState extends State<ScannerScreen> {
               ),
             ),
           ),
-
-          // Capture button
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 32.0),
+          Positioned(
+            bottom: 24,
+            left: 0,
+            right: 0,
+            child: Center(
               child: FloatingActionButton(
                 heroTag: 'captureButton',
                 backgroundColor: AppColors.primaryBlue,
@@ -154,16 +220,13 @@ class _ScannerScreenState extends State<ScannerScreen> {
                     final image = await _controller.takePicture();
                     if (!mounted) return;
 
-                    // Process and save scan result
                     await _processScanResult(image.path);
 
-                    // Navigate to results screen
                     if (widget.onCaptured != null) {
                       widget.onCaptured!(image.path);
                       return;
                     }
 
-                    // Fallback: push results route
                     await Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
