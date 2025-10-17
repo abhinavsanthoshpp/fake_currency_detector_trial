@@ -65,6 +65,7 @@ class VeriScanProApp extends StatelessWidget {
               Locale('en'),
               Locale('hi'),
               Locale('te'),
+              Locale('ml'),
             ],
             locale: localeProvider.locale,
             theme: ThemeData(

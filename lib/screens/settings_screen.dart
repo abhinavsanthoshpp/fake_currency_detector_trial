@@ -16,6 +16,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     {'code': 'en', 'name': 'English', 'flag': '🇺🇸'},
     {'code': 'hi', 'name': 'हिन्दी (Hindi)', 'flag': '🇮🇳'},
     {'code': 'te', 'name': 'తెలుగు (Telugu)', 'flag': '🇮🇳'},
+    {'code': 'ml', 'name': 'മലയാളം (Malayalam)', 'flag': '🇮🇳'},
   ];
 
   @override

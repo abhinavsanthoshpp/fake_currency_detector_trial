@@ -1,6 +1,6 @@
 {
   "@@locale": "hi",
-  "homeTitle": "वेरीस्कैन प्रो",
+  "homeTitle": "DeepScan",
   "scanHistory": "स्कैन इतिहास",
   "authentic": "प्रामाणिक",
   "suspicious": "संदिग्ध",
@@ -26,12 +26,12 @@
   "home": "होम",
   "scan": "स्कैन",
   "history": "इतिहास",
-  "welcomeTitle": "Welcome to DeepScan",
-  "welcomeSubtitle": "verify notes using ml",
-  "lightingTip":"Ensure good lighting and align note edges for best results",
-  "viewAll":"View all",
-  "recentScans": "Recent Scans",
-  "liveScanSubtitle": "Real-time detection with edge guidance",
-  "liveScanTitle": "Live Banknote Scan",
-  "quickActions":"Quick Actions"
+  "welcomeTitle": "डिप्स्कैन में आपका स्वागत है",
+  "welcomeSubtitle": "नोटों के सत्यापन के लिए एमएल का उपयोग करें",
+  "lightingTip": "श्रेष्ठ परिणामों के लिए अच्छी रोशनी सुनिश्चित करें और नोट के किनारों को संरेखित करें",
+  "viewAll": "सभी देखें",
+  "recentScans": "हाल के स्कैन",
+  "liveScanSubtitle": "एज गाइडेंस के साथ रीयल-टाइम डिटेक्शन﻿",
+  "liveScanTitle": "लाइव बैंकनोट स्कैन",
+  "quickActions": "त्वरित क्रियाएं"
 }

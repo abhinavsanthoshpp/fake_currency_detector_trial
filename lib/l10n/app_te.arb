@@ -1,6 +1,6 @@
 {
   "@@locale": "te",
-  "homeTitle": "వెరీస్కాన్ ప్రో",
+  "homeTitle": "DeepScan",
   "scanHistory": "స్కాన్ చరిత్ర",
   "authentic": "ప్రామాణికమైన",
   "suspicious": "అనుమానాస్పదం",
@@ -26,12 +26,13 @@
   "home": "హోమ్",
   "scan": "స్కాన్",
   "history": "చరిత్ర",
-  "welcomeTitle": "Welcome to DeepScan",
-  "welcomeSubtitle": "verify notes using ml",
-  "lightingTip":"Ensure good lighting and align note edges for best results",
-  "viewAll":"View all",
-  "recentScans": "Recent Scans",
-  "liveScanSubtitle": "Real-time detection with edge guidance",
-  "liveScanTitle": "Live Banknote Scan",
-  "quickActions":"Quick Actions"
+  "welcomeTitle": "డీప్‌స్కాన్‌కు స్వాగతం",
+"welcomeSubtitle": "ఉపయోగించి నోట్లను ధృవీకరించండి",
+"lightingTip": "మంచి ఫలితాల కోసం ఉత్తమ లైటింగ్‌ను నిర్ధారించండి మరియు నోట్ ఎడ్జ్‌లను సరిపోసుకోండి",
+"viewAll": "అన్నీ చూడండి",
+"recentScans": "తాజా స్కాన్‌లు",
+"liveScanSubtitle": "ఎడ్జ్ గైడెన్స్‌తో రియల్-టైమ్ డిటెక్షన్",
+"liveScanTitle": "లైవ్ బ్యాంక్‌నోట్ స్కాన్",
+"quickActions": "త్వరిత చర్యలు"
+
 }
