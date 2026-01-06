@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
 import '../screens/results_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 import '../database/scan_result.dart';
 import '../screens/history_screen.dart';
 

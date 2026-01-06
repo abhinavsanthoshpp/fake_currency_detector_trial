@@ -3,7 +3,7 @@ import 'dart:io';
 import '../utils/constants.dart';
 import '../database/database_service.dart';
 import '../database/scan_result.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});

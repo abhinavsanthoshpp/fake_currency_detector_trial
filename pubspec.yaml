@@ -11,12 +11,14 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  intl: ^0.18.1           # Downgraded to match Flutter SDK pinning
+  intl: ^0.20.2           # Downgraded to match Flutter SDK pinning
   provider: ^6.1.1
-  camera: ^0.11.0+2
-  permission_handler: ^11.0.1
+  camera: ^0.11.0
+  permission_handler: ^11.3.0
   hive: ^2.2.3
   hive_flutter: ^1.1.0
+  flutter_vision: ^2.0.0
+  ultralytics_yolo: ^0.0.1
 
 
 dev_dependencies:
@@ -30,4 +32,6 @@ flutter:
   uses-material-design: true
   generate: true    
   assets:
-    - assets/logo.jpg            # ADD THIS
+    - assets/logo.jpg
+    - assets/models/best_float32.tflite
+    - assets/models/labels.txt

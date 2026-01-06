@@ -16,31 +16,31 @@ def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '
 def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
 
 android {
-    namespace "com.example.fake_currency_detector_trail"
-    compileSdk 34
-    ndkVersion flutter.ndkVersion
-
-    defaultConfig {
-        applicationId "com.example.fake_currency_detector_trail"
-        minSdkVersion 21
-        targetSdkVersion 34
-        versionCode flutterVersionCode.toInteger()
-        versionName flutterVersionName
-        multiDexEnabled true
-    }
+    namespace = "com.example.fake_currency_detector_trial"
+    compileSdk = 36
+    ndkVersion = "26.1.10909125" 
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = '17'
+        jvmTarget = "17"
+        freeCompilerArgs = ["-Xlint:-options"]
+    }
+
+    defaultConfig {
+        applicationId = "com.example.fake_currency_detector_trial"
+        minSdkVersion = flutter.minSdkVersion
+        targetSdk = 36
+        versionCode = flutterVersionCode.toInteger()
+        versionName = flutterVersionName
     }
 
     buildTypes {
         release {
-            signingConfig signingConfigs.debug
+            signingConfig = signingConfigs.debug
         }
     }
 

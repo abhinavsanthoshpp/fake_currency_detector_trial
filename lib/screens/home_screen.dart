@@ -6,7 +6,7 @@ import 'scanner_screen.dart';
 import 'history_screen.dart';
 import 'results_screen.dart';
 import 'settings_screen.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../l10n/app_localizations.dart';
 import '../database/database_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -67,31 +67,16 @@ class _HomeScreenState extends State<HomeScreen>
         final recentScansList = DatabaseService.getAllScanResults();
         return HomeContent(
           onScanPressed: () {
-            if (!mounted) return;
-            setState(() {
-              _tabIndex = 1;
-            });
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ScannerScreen(
+                  camera: widget.camera,
+                ),
+              ),
+            );
           },
           recentScans: recentScansList,
-        );
-      case 1:
-        return ScannerScreen(
-          camera: widget.camera,
-          onBack: () {
-            if (!mounted) return;
-            setState(() {
-              _tabIndex = 0;
-              _showResult = false;
-            });
-          },
-          onCaptured: (path) {
-            if (!mounted) return;
-            setState(() {
-              _lastImagePath = path;
-              _showResult = true;
-              _fadeController.forward(from: 0);
-            });
-          },
         );
       case 2:
         return const HistoryScreen();
@@ -99,10 +84,14 @@ class _HomeScreenState extends State<HomeScreen>
         final recentScansList = DatabaseService.getAllScanResults();
         return HomeContent(
           onScanPressed: () {
-            if (!mounted) return;
-            setState(() {
-              _tabIndex = 1;
-            });
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ScannerScreen(
+                  camera: widget.camera,
+                ),
+              ),
+            );
           },
           recentScans: recentScansList,
         );
@@ -158,11 +147,22 @@ class _HomeScreenState extends State<HomeScreen>
       child: BottomNavigationBar(
         currentIndex: _tabIndex,
         onTap: (index) {
-          if (!mounted) return;
-          setState(() {
-            _tabIndex = index;
-            _showResult = false; // hide result if user switches tabs
-          });
+          if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ScannerScreen(
+                  camera: widget.camera,
+                ),
+              ),
+            );
+          } else {
+            if (!mounted) return;
+            setState(() {
+              _tabIndex = index;
+              _showResult = false; // hide result if user switches tabs
+            });
+          }
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.transparent,
