@@ -101,17 +101,17 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildResultOverlay() {
     return FadeTransition(
       opacity: _fadeAnimation,
-      child: ResultsScreen(
-        imagePath: _lastImagePath,
-        onBack: () {
-          if (!mounted) return;
-          setState(() {
-            _showResult = false;
-            _tabIndex = 1;
-          });
-        },
-      ),
-    );
+              child: ResultsScreen(
+                imagePath: _lastImagePath,
+                yoloResults: [], // Add this line
+                onBack: () {
+                  if (!mounted) return;
+                  setState(() {
+                    _showResult = false;
+                    _tabIndex = 1;
+                  });
+                },
+              ),    );
   }
 
   AppBar _buildAppBar() {

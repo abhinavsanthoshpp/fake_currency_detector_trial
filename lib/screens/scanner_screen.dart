@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data'; // Needed for image processing
 
 import 'package:camera/camera.dart';
 import 'package:currency_scanner/database/database_service.dart';
@@ -8,6 +9,8 @@ import 'package:currency_scanner/utils/constants.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vision/flutter_vision.dart';
+import 'package:currency_scanner/services/verifier_service.dart';
+import 'package:image/image.dart' as img;
 
 class ScannerScreen extends StatefulWidget {
   final CameraDescription? camera;
@@ -24,6 +27,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
   bool isCameraInitialized = false;
   bool isDetecting = false;
   bool _isProcessingFrame = false;
+  late CurrencyVerifier _currencyVerifier;
 
   @override
   void initState() {
@@ -34,7 +38,8 @@ class _ScannerScreenState extends State<ScannerScreen> {
     ]);
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
     vision = FlutterVision();
-    _initializeCamera();
+    _currencyVerifier = CurrencyVerifier(); // Initialize here
+    _initializeCamera(); // Call after initializing _currencyVerifier
   }
 
   Future<void> _initializeCamera() async {
@@ -50,6 +55,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     try {
       await controller.initialize();
       await loadYoloModel();
+      await _currencyVerifier.loadModel(); // Await model loading here
       if (mounted) {
         setState(() {
           isCameraInitialized = true;
@@ -76,8 +82,82 @@ class _ScannerScreenState extends State<ScannerScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     controller.dispose();
     vision.closeYoloModel();
+    _currencyVerifier.close(); // Call the new close method 
     super.dispose();
   }
+
+  img.Image _convertCameraImage(CameraImage cameraImage) {
+    if (cameraImage.format.group == ImageFormatGroup.yuv420) {
+      return _convertYUV420ToImage(cameraImage);
+    } else if (cameraImage.format.group == ImageFormatGroup.bgra8888) {
+      return _convertBGRA8888ToImage(cameraImage);
+    }
+    throw Exception("Unsupported image format");
+  }
+
+  img.Image _convertYUV420ToImage(CameraImage cameraImage) {
+    final int width = cameraImage.width;
+    final int height = cameraImage.height;
+
+    final img.Image image = img.Image(width: width, height: height); // Create Image buffer
+
+    final Plane planeY = cameraImage.planes[0];
+    final Plane planeU = cameraImage.planes[1];
+    final Plane planeV = cameraImage.planes[2];
+
+    final Uint8List yData = planeY.bytes;
+    final Uint8List uData = planeU.bytes;
+    final Uint8List vData = planeV.bytes;
+
+    final int yRowStride = planeY.bytesPerRow;
+    final int uRowStride = planeU.bytesPerRow;
+    final int vRowStride = planeV.bytesPerRow;
+    final int uPixelStride = planeU.bytesPerPixel!;
+    final int vPixelStride = planeV.bytesPerPixel!;
+
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        final int uvX = (x / 2).floor();
+        final int uvY = (y / 2).floor();
+
+        final int yIndex = y * yRowStride + x;
+        final int uIndex = uvY * uRowStride + uvX * uPixelStride;
+        final int vIndex = uvY * vRowStride + uvX * vPixelStride;
+
+        final int Y = yData[yIndex];
+        final int U = uData[uIndex];
+        final int V = vData[vIndex];
+
+        // YUV to RGB conversion
+        int R = (Y + V * 1.402).round();
+        int G = (Y - U * 0.344136 - V * 0.714136).round();
+        int B = (Y + U * 1.772).round();
+
+        R = R.clamp(0, 255);
+        G = G.clamp(0, 255);
+        B = B.clamp(0, 255);
+
+        image.setPixelRgb(x, y, R, G, B);
+      }
+    }
+    return image;
+  }
+
+  img.Image _convertBGRA8888ToImage(CameraImage cameraImage) {
+    final int width = cameraImage.width;
+    final int height = cameraImage.height;
+    final Uint8List bgraBytes = cameraImage.planes[0].bytes;
+
+    // BGRA to RGBA conversion using image package
+    final img.Image image = img.Image.fromBytes(
+      width: width,
+      height: height,
+      bytes: bgraBytes.buffer,
+      order: img.ChannelOrder.bgra,
+    );
+    return image;
+  }
+
 
   Future<void> loadYoloModel() async {
     await vision.loadYoloModel(
@@ -96,10 +176,31 @@ class _ScannerScreenState extends State<ScannerScreen> {
         iouThreshold: 0.4,
         confThreshold: 0.4,
         classThreshold: 0.5);
+
+    // Convert CameraImage to img.Image for CurrencyVerifier
+    final img.Image? convertedImage = _convertCameraImage(cameraImage);
+    if (convertedImage == null) {
+      debugPrint("Failed to convert CameraImage for verification.");
+      return;
+    }
+
+    List<Map<String, dynamic>> verifiedYoloResults = [];
+
     if (result.isNotEmpty) {
+      for (var yoloDetection in result) {
+        String featureName = yoloDetection['tag'];
+        // Ensure bbox is a List<int>
+        List<double> bbox = List<double>.from(yoloDetection['box']);
+
+        bool isGenuine = _currencyVerifier.verifyFeature(convertedImage, bbox, featureName);
+        
+        // Add verification status to the result map
+        yoloDetection['isGenuine'] = isGenuine;
+        verifiedYoloResults.add(yoloDetection);
+      }
       if (mounted) {
         setState(() {
-          yoloResults = result;
+          yoloResults = verifiedYoloResults;
         });
       }
     }
@@ -153,6 +254,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
     final double factorY = screen.height / controller.value.previewSize!.width;
 
     return yoloResults.map((result) {
+      bool isGenuine = result['isGenuine'] ?? true; // Default to true if not set
+      Color boxColor = isGenuine ? Colors.green : Colors.red;
+      String verificationText = isGenuine ? "Genuine" : "Fake";
+
       return Positioned(
         left: result["box"][0] * factorX,
         top: result["box"][1] * factorY,
@@ -161,10 +266,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
         child: Container(
           decoration: BoxDecoration(
             borderRadius: const BorderRadius.all(Radius.circular(10.0)),
-            border: Border.all(color: Colors.pink, width: 2.0),
+            border: Border.all(color: boxColor, width: 2.0), // Use dynamic color
           ),
           child: Text(
-            "${result['tag']} ${(result['box'][4] * 100).toStringAsFixed(0)}%",
+            "${result['tag']} ${(result['box'][4] * 100).toStringAsFixed(0)}% $verificationText", // Add verification text
             style: const TextStyle(
               background: null,
               color: Colors.white,
@@ -223,13 +328,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
                     final image = await controller.takePicture();
                     if (!mounted) return;
 
-                    await _processScanResult(image.path);
-
                     await Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
                         builder: (context) => ResultsScreen(
                           imagePath: image.path,
+                          yoloResults: yoloResults, // Pass the yoloResults
                         ),
                       ),
                     );

@@ -19,6 +19,8 @@ dependencies:
   hive_flutter: ^1.1.0
   flutter_vision: ^2.0.0
   ultralytics_yolo: ^0.0.1
+  tflite_flutter: ^0.12.1
+  image: ^4.7.2
 
 
 dev_dependencies:
@@ -35,3 +37,5 @@ flutter:
     - assets/logo.jpg
     - assets/models/best_float32.tflite
     - assets/models/labels.txt
+    - assets/models/verifier.tflite
+    - assets/models/verifier_labels.txt

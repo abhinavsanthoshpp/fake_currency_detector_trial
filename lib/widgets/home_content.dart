@@ -234,6 +234,7 @@ class HomeContent extends StatelessWidget {
                   MaterialPageRoute(
                     builder: (context) => ResultsScreen(
                       imagePath: scan.imagePath,
+                      yoloResults: [], // Add this line
                     ),
                   ),
                 );

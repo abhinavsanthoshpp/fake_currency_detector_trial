@@ -2,105 +2,77 @@ import 'package:flutter/material.dart';
 import 'dart:io';
 import '../l10n/app_localizations.dart';
 import '../utils/constants.dart';
-import '../database/database_service.dart';
-import '../database/scan_result.dart';
+// Remove database imports, as we get data directly now
+// import '../database/database_service.dart';
+// import '../database/scan_result.dart';
 
 class ResultsScreen extends StatefulWidget {
   final String? imagePath;
   final VoidCallback? onBack;
+  final List<Map<String, dynamic>> yoloResults; // Add this
 
-  const ResultsScreen({Key? key, this.imagePath, this.onBack})
-      : super(key: key);
+  const ResultsScreen({
+    Key? key,
+    this.imagePath,
+    this.onBack,
+    required this.yoloResults, // Add this
+  }) : super(key: key);
 
   @override
   State<ResultsScreen> createState() => _ResultsScreenState();
 }
 
 class _ResultsScreenState extends State<ResultsScreen> {
-  ScanResult? latestScan;
-  bool isLoading = true;
-
   // Detailed security features with individual scores
   Map<String, double> securityFeatures = {};
   double overallScore = 0.0;
+  String currencyType = "Unknown Currency";
+  String resultStatus = "Undetermined";
 
   @override
   void initState() {
     super.initState();
-    _loadLatestScan();
+    _processYoloResults();
   }
 
-  Future<void> _loadLatestScan() async {
-    try {
-      final scans = DatabaseService.getAllScanResults();
-      if (scans.isNotEmpty) {
-        setState(() {
-          latestScan = scans.first; // Most recent scan
-          _generateSecurityAnalysis();
-          isLoading = false;
-        });
-      } else {
-        setState(() {
-          isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+  void _processYoloResults() {
+    if (widget.yoloResults.isEmpty) {
+      return;
     }
-  }
 
-  void _generateSecurityAnalysis() {
-    if (latestScan == null) return;
+    Map<String, double> features = {};
+    for (var result in widget.yoloResults) {
+      String tag = result['tag'];
+      bool isGenuine = result['isGenuine'] ?? false;
+      features[tag] = isGenuine ? 1.0 : 0.0;
+    }
 
-    // Generate realistic security feature scores based on overall confidence
-    final baseConfidence = latestScan!.confidenceLevel;
-    final isAuthentic = latestScan!.resultStatus == 'Authentic';
+    double totalScore = 0;
+    features.forEach((key, value) {
+      totalScore += value;
+    });
 
     setState(() {
-      securityFeatures = {
-        'Security Thread':
-            _generateFeatureScore(baseConfidence, isAuthentic, 0.1),
-        'feature positions':
-            _generateFeatureScore(baseConfidence, isAuthentic, 0.7),
-        'feature verification':
-            _generateFeatureScore(baseConfidence, isAuthentic, 0.7)
-      };
-
-      // Calculate overall score as average of all features
-      overallScore = securityFeatures.values.reduce((a, b) => a + b) /
-          securityFeatures.length;
+      securityFeatures = features;
+      if (features.isNotEmpty) {
+        overallScore = totalScore / features.length;
+      }
+      
+      // Determine overall currency type and status from YOLO results.
+      // This is a simple logic, can be improved.
+      final uniqueTags = widget.yoloResults.map((r) => r['tag'].split('_').first).toSet();
+      currencyType = uniqueTags.join(', ');
+      resultStatus = overallScore > 0.7 ? "Authentic" : "Suspicious";
     });
   }
 
-  double _generateFeatureScore(
-      double baseScore, bool isAuthentic, double variance) {
-    // Add some realistic variation to each feature
-    final random = (DateTime.now().millisecondsSinceEpoch % 100) / 100.0;
-    double score = baseScore + (variance * (random - 0.5));
-
-    // Ensure score stays within realistic bounds
-    if (isAuthentic) {
-      score = score.clamp(0.75, 1.0);
-    } else {
-      score = score.clamp(0.0, 0.7);
-    }
-
-    return score;
-  }
+  // _generateFeatureScore is no longer needed
 
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
 
-    if (isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (latestScan == null) {
+    if (widget.yoloResults.isEmpty) {
       return Scaffold(
         appBar: AppBar(
           title: Text(localizations.scanResults),
@@ -123,7 +95,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   size: 64, color: AppColors.textGray),
               const SizedBox(height: 16),
               Text(
-                'No scan results available',
+                'No features detected.', // Changed message
                 style: const TextStyle(fontSize: 18, color: AppColors.textGray),
               ),
             ],
@@ -132,8 +104,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
       );
     }
 
-    final scan = latestScan!;
-    final isAuthentic = scan.resultStatus == localizations.authentic;
+    final isAuthentic = overallScore > 0.7;
 
     return Scaffold(
       backgroundColor: AppColors.backgroundColor,
@@ -199,7 +170,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    scan.resultStatus,
+                    resultStatus,
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -209,7 +180,7 @@ class _ResultsScreenState extends State<ResultsScreen> {
                     ),
                   ),
                   Text(
-                    scan.currencyType,
+                    currencyType,
                     style: const TextStyle(
                         fontSize: 18, color: AppColors.textGray),
                   ),
@@ -379,11 +350,11 @@ class _ResultsScreenState extends State<ResultsScreen> {
               ),
               child: Column(
                 children: [
-                  _buildDetailRow(localizations.scanned, scan.formattedDate),
+                  _buildDetailRow(localizations.scanned, DateTime.now().toLocal().toString()), // Use current date
                   const Divider(),
-                  _buildDetailRow(localizations.currency, scan.currencyType),
+                  _buildDetailRow(localizations.currency, currencyType),
                   const Divider(),
-                  _buildDetailRow(localizations.status, scan.resultStatus),
+                  _buildDetailRow(localizations.status, resultStatus),
                 ],
               ),
             ),
