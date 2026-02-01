@@ -9,13 +9,15 @@ import '../utils/constants.dart';
 class ResultsScreen extends StatefulWidget {
   final String? imagePath;
   final VoidCallback? onBack;
-  final List<Map<String, dynamic>> yoloResults; // Add this
+  final List<Map<String, dynamic>> yoloResults;
+  final bool isIntermediateResult;
 
   const ResultsScreen({
     Key? key,
     this.imagePath,
     this.onBack,
-    required this.yoloResults, // Add this
+    required this.yoloResults,
+    this.isIntermediateResult = false,
   }) : super(key: key);
 
   @override
@@ -362,29 +364,50 @@ class _ResultsScreenState extends State<ResultsScreen> {
             const SizedBox(height: 24),
 
             // Action button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  if (widget.onBack != null) {
-                    widget.onBack!();
-                  } else {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
-                  padding: const EdgeInsets.all(16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            if (widget.isIntermediateResult)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop(true);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryBlue,
+                    padding: const EdgeInsets.all(16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Proceed to Thread Verification',
+                    style: TextStyle(fontSize: 16, color: Colors.white),
                   ),
                 ),
-                child: Text(
-                  localizations.scanAnotherCurrency,
-                  style: const TextStyle(fontSize: 16, color: Colors.white),
+              )
+            else
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (widget.onBack != null) {
+                      widget.onBack!();
+                    } else {
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryBlue,
+                    padding: const EdgeInsets.all(16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    localizations.scanAnotherCurrency,
+                    style: const TextStyle(fontSize: 16, color: Colors.white),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),

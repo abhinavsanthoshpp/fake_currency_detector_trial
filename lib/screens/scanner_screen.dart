@@ -1,365 +1,129 @@
-import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data'; // Needed for image processing
 
 import 'package:camera/camera.dart';
-import 'package:currency_scanner/database/database_service.dart';
-import 'package:currency_scanner/database/scan_result.dart';
 import 'package:currency_scanner/screens/results_screen.dart';
-import 'package:currency_scanner/utils/constants.dart';
+import 'package:currency_scanner/services/thread_verifier_service.dart';
+import 'package:currency_scanner/services/verifier_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_vision/flutter_vision.dart';
-import 'package:currency_scanner/services/verifier_service.dart';
 import 'package:image/image.dart' as img;
-import 'package:currency_scanner/services/thread_verifier_service.dart'; // Import the new service
 
 class ScannerScreen extends StatefulWidget {
-  final CameraDescription? camera;
+  const ScannerScreen({super.key});
 
-  const ScannerScreen({super.key, this.camera});
   @override
   State<ScannerScreen> createState() => _ScannerScreenState();
 }
 
 class _ScannerScreenState extends State<ScannerScreen> {
-  late CameraController controller;
+  late List<CameraDescription> cameras;
+  late CameraController cameraController;
   late FlutterVision vision;
-  List<Map<String, dynamic>> yoloResults = [];
+  late CurrencyVerifier currencyVerifier;
+  late ThreadVerifierService threadVerifierService;
+
   bool isCameraInitialized = false;
-
-  // New state variables
-  File? _capturedImage;
-  bool _isProcessingImage = false;
-  bool _isProcessingVideo = false;
-  Uint8List? _processedImageBytes;
-
-  late CurrencyVerifier _currencyVerifier;
-  late ThreadVerifierService _threadVerifierService;
+  int verificationStep = 1;
+  File? capturedImage;
+  List<Map<String, dynamic>> yoloResults = [];
+  bool isProcessing = false;
+  String? videoVerdict;
 
   @override
   void initState() {
     super.initState();
     SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
+      DeviceOrientation.landscapeLeft,
     ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersive);
+    initialize();
+  }
+
+  Future<void> initialize() async {
+    cameras = await availableCameras();
+    cameraController = CameraController(cameras.first, ResolutionPreset.high, enableAudio: false);
+    await cameraController.initialize();
     vision = FlutterVision();
-    _currencyVerifier = CurrencyVerifier();
-    _threadVerifierService = ThreadVerifierService();
-    _initializeCamera();
-  }
-
-  Future<void> _initializeCamera() async {
-    final cameras = await availableCameras();
-    final CameraDescription selected = widget.camera ?? cameras.first;
-
-    controller = CameraController(
-      selected,
-      ResolutionPreset.high,
-      enableAudio: false,
-      imageFormatGroup: ImageFormatGroup.yuv420,
-    );
-    try {
-      await controller.initialize();
-      await loadYoloModel();
-      await _currencyVerifier.loadModel();
-      await _threadVerifierService.loadYoloModel();
-      if (mounted) {
-        setState(() {
-          isCameraInitialized = true;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error initializing camera: $e');
-    }
-  }
-
-  Future<void> loadYoloModel() async {
+    currencyVerifier = CurrencyVerifier();
+    threadVerifierService = ThreadVerifierService();
     await vision.loadYoloModel(
         labels: 'assets/models/labels.txt',
         modelPath: 'assets/models/best_float32.tflite',
         modelVersion: "yolov8",
         numThreads: 1,
         useGpu: false);
-  }
-
-  Future<void> _captureImage() async {
-    if (!controller.value.isInitialized) {
-      return;
-    }
+    await currencyVerifier.loadModel();
+    await threadVerifierService.loadYoloModel();
     setState(() {
-      _isProcessingImage = true;
+      isCameraInitialized = true;
     });
-    try {
-      final imageFile = await controller.takePicture();
-      final File image = File(imageFile.path);
-
-      // Process the image
-      final results = await yoloOnImage(image);
-
-      // Draw boxes on the image
-      final Uint8List processedImage = await _drawBoxesOnImage(image, results);
-
-      if (mounted) {
-        setState(() {
-          _capturedImage = image;
-          _processedImageBytes = processedImage;
-          _isProcessingImage = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error capturing or processing image: $e');
-      if (mounted) {
-        setState(() {
-          _isProcessingImage = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error during image analysis'),
-            backgroundColor: AppColors.errorRed,
-          ),
-        );
-      }
-    }
   }
 
-  Future<Uint8List> _drawBoxesOnImage(
-      File imageFile, List<Map<String, dynamic>> results) async {
-    final Uint8List imageBytes = await imageFile.readAsBytes();
-    img.Image? originalImage = img.decodeImage(imageBytes);
-
-    if (originalImage == null) {
-      throw Exception("Could not decode image");
-    }
-
-    for (var result in results) {
-      bool isGenuine = result['isGenuine'] ?? true;
-      img.Color color = isGenuine ? img.ColorRgb(0, 255, 0) : img.ColorRgb(255, 0, 0);
-
-      // Convert double coordinates to int
-      final int x1 = (result["box"][0] as double).toInt();
-      final int y1 = (result["box"][1] as double).toInt();
-      final int x2 = (result["box"][2] as double).toInt();
-      final int y2 = (result["box"][3] as double).toInt();
-
-      // Draw the rectangle using drawPixel
-      for (int x = x1; x < x2; x++) {
-        for (int y = y1; y < y2; y++) {
-          if (x == x1 || x == x2 - 1 || y == y1 || y == y2 - 1) {
-            img.drawPixel(originalImage, x, y, color);
-          }
-        }
-      }
-    }
-    // Encode the image back to Uint8List
-    return Uint8List.fromList(img.encodeJpg(originalImage));
-  }
-
-  Future<List<Map<String, dynamic>>> yoloOnImage(File imageFile) async {
-    final imageBytes = await imageFile.readAsBytes();
-    final decodedImage = await decodeImageFromList(imageBytes);
-
-    final result = await vision.yoloOnFrame(
-        bytesList: [imageBytes],
-        imageHeight: decodedImage.height,
-        imageWidth: decodedImage.width,
-        iouThreshold: 0.4,
-        confThreshold: 0.4,
-        classThreshold: 0.5);
-
-    // Convert File to img.Image for CurrencyVerifier
-    img.Image? convertedImage = img.decodeImage(imageBytes);
-    if (convertedImage == null) {
-      debugPrint("Failed to convert File for verification.");
-      return [];
-    }
-
-    List<Map<String, dynamic>> verifiedYoloResults = [];
-
-    if (result.isNotEmpty) {
-      for (var yoloDetection in result) {
-        String featureName = yoloDetection['tag'];
-        List<double> bbox = List<double>.from(yoloDetection['box']);
-
-        bool isGenuine =
-            _currencyVerifier.verifyFeature(convertedImage, bbox, featureName);
-
-        yoloDetection['isGenuine'] = isGenuine;
-        verifiedYoloResults.add(yoloDetection);
-      }
-    }
-    return verifiedYoloResults;
-  }
-
-  Future<void> _captureVideo() async {
-    if (!controller.value.isInitialized || controller.value.isRecordingVideo) {
-      return;
-    }
-    setState(() {
-      _isProcessingVideo = true;
-    });
-
-    try {
-      await controller.startVideoRecording();
-      // Show a recording indicator on the UI
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Recording video for 15 seconds...'),
-          backgroundColor: Colors.blue,
-          duration: Duration(seconds: 15),
-        ),
-      );
-
-      await Future.delayed(const Duration(seconds: 15));
-      final XFile videoFile = await controller.stopVideoRecording();
-
-      // Now analyze the video
-      await _analyzeVideo(videoFile.path);
-    } catch (e) {
-      debugPrint('Error during video recording or analysis: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Error during video analysis'),
-            backgroundColor: AppColors.errorRed,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isProcessingVideo = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _analyzeVideo(String videoPath) async {
-    debugPrint('Video recorded to: $videoPath');
-
-    // The loading indicator is already handled by _isProcessingVideo state
-    try {
-      // Analyze the recorded video
-      final String verdict =
-          await _threadVerifierService.analyzeVideo(videoPath);
-
-      // Show the verdict in a popup
-      await showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Thread Verification Result'),
-          content: Text(verdict),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Reset the state to allow for a new scan
-                setState(() {
-                  _capturedImage = null;
-                  _processedImageBytes = null;
-                });
-              },
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      debugPrint('Error analyzing video: $e');
-      // Optionally, show an error message to the user
-    }
+  @override
+  void dispose() {
+    vision.closeYoloModel();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+    currencyVerifier.close();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     if (!isCameraInitialized) {
       return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
       );
     }
     return Scaffold(
-      backgroundColor: Colors.black,
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          // Add CameraPreview so the user can see what they are capturing
-          Positioned.fill(
-            child: AspectRatio(
-              aspectRatio: controller.value.aspectRatio,
-              child: CameraPreview(controller),
+          CameraPreview(cameraController),
+          if (isProcessing)
+            const Center(
+              child: CircularProgressIndicator(),
             ),
-          ),
-          Center(
+          Positioned(
+            right: 20,
+            bottom: 20,
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                if (_processedImageBytes != null)
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Image.memory(_processedImageBytes!),
-                    ),
+                if (verificationStep == 1)
+                  ElevatedButton(
+                    onPressed: isProcessing ? null : _captureAndAnalyzeImage,
+                    child: const Text('Step 1: Verify Image'),
                   ),
-                if (_capturedImage == null && _processedImageBytes == null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 32.0),
-                    child: ElevatedButton(
-                      onPressed: _captureImage,
-                      style: ElevatedButton.styleFrom(
-                        shape: const CircleBorder(),
-                        padding: const EdgeInsets.all(24),
-                      ),
-                      child: const Icon(Icons.camera_alt),
-                    ),
-                  ),
-                if (_capturedImage != null && !_isProcessingVideo)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 32.0),
-                    child: ElevatedButton(
-                      onPressed: _captureVideo,
-                      style: ElevatedButton.styleFrom(
-                        shape: const CircleBorder(),
-                        padding: const EdgeInsets.all(24),
-                      ),
-                      child: const Icon(Icons.videocam),
-                    ),
+                if (verificationStep == 2)
+                  ElevatedButton(
+                    onPressed: isProcessing ? null : _startVideoVerification,
+                    child: const Text('Step 2: Verify Thread'),
                   ),
               ],
             ),
           ),
-          if (_isProcessingImage || _isProcessingVideo)
+          if (videoVerdict != null)
             Container(
-              color: Colors.black.withOpacity(0.7),
-              child: const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(color: Colors.white),
-                    SizedBox(height: 20),
-                    Text(
-                      'Verifying... Please wait.',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
+              color: Colors.black54,
+              padding: const EdgeInsets.all(16.0),
+              child: Center(
+                  child: Text(videoVerdict!,
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 24))),
             ),
           Positioned(
-            top: MediaQuery.of(context).padding.top + 8,
-            left: 8,
+            top: 20,
+            left: 20,
             child: SafeArea(
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () {
-                  if (Navigator.of(context).canPop()) {
-                    Navigator.of(context).pop();
-                  }
-                },
+              child: FloatingActionButton(
+                onPressed: () => Navigator.of(context).pop(),
+                backgroundColor: Colors.black.withOpacity(0.5),
+                child: const Icon(Icons.arrow_back),
               ),
             ),
           ),
@@ -368,5 +132,136 @@ class _ScannerScreenState extends State<ScannerScreen> {
     );
   }
 
+  Future<void> _captureAndAnalyzeImage() async {
+    setState(() {
+      isProcessing = true;
+    });
 
+    final imageFile = await cameraController.takePicture();
+    final image = File(imageFile.path);
+
+    final imageBytes = await image.readAsBytes();
+    final decodedImage = await decodeImageFromList(imageBytes);
+
+    final results = await vision.yoloOnImage(
+        bytesList: imageBytes,
+        imageHeight: decodedImage.height,
+        imageWidth: decodedImage.width,
+        iouThreshold: 0.4,
+        confThreshold: 0.4,
+        classThreshold: 0.5);
+
+    img.Image? convertedImage = img.decodeImage(imageBytes);
+    if (convertedImage == null) {
+      setState(() {
+        isProcessing = false;
+      });
+      return;
+    }
+
+    List<Map<String, dynamic>> verifiedResults = [];
+    for (var result in results) {
+      bool isGenuine = currencyVerifier.verifyFeature(
+          convertedImage, List<double>.from(result['box']), result['tag']);
+      result['isGenuine'] = isGenuine;
+      verifiedResults.add(result);
+    }
+
+    // Set orientation to portrait before showing results
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+
+    final shouldProceed = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ResultsScreen(
+          imagePath: image.path,
+          yoloResults: verifiedResults,
+          isIntermediateResult: true,
+        ),
+      ),
+    );
+
+    // Set orientation back to landscape after returning from results
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeRight,
+      DeviceOrientation.landscapeLeft,
+    ]);
+
+    if (shouldProceed == true) {
+      _startVideoVerification();
+    } else {
+      setState(() {
+        isProcessing = false;
+      });
+    }
+  }
+
+  Future<void> _startVideoVerification() async {
+    setState(() {
+      verificationStep = 3;
+    });
+    await _captureAndAnalyzeVideo();
+  }
+
+  Future<void> _captureAndAnalyzeVideo() async {
+    setState(() {
+      isProcessing = true;
+    });
+
+    await cameraController.startVideoRecording();
+    await Future.delayed(const Duration(seconds: 15));
+    final videoFile = await cameraController.stopVideoRecording();
+
+    final verdict = await threadVerifierService.analyzeVideo(videoFile.path);
+
+    setState(() {
+      videoVerdict = verdict;
+      isProcessing = false;
+      verificationStep = 4;
+    });
+  }
+
+  List<Widget> displayBoxes(Size screen) {
+    if (yoloResults.isEmpty || verificationStep != 2) return [];
+    
+    final double imageAspectRatio = cameraController.value.aspectRatio;
+    final double screenAspectRatio = screen.width / screen.height;
+    double scale = 1.0;
+    double offsetX = 0;
+    double offsetY = 0;
+
+    if (imageAspectRatio > screenAspectRatio) {
+      scale = screen.width / (cameraController.value.previewSize?.height ?? screen.width);
+      offsetY = (screen.height - (cameraController.value.previewSize?.width ?? screen.height) * scale) / 2;
+    } else {
+      scale = screen.height / (cameraController.value.previewSize?.width ?? screen.height);
+      offsetX = (screen.width - (cameraController.value.previewSize?.height ?? screen.width) * scale) / 2;
+    }
+
+    return yoloResults.map((result) {
+      return Positioned(
+        left: result["box"][0] * scale + offsetX,
+        top: result["box"][1] * scale + offsetY,
+        width: (result["box"][2] - result["box"][0]) * scale,
+        height: (result["box"][3] - result["box"][1]) * scale,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(
+                color: result['isGenuine'] ? Colors.green : Colors.red,
+                width: 2.0),
+          ),
+          child: Text(
+            "${result['tag']} ${(result['box'][4] * 100).toStringAsFixed(0)}%",
+            style: TextStyle(
+              background: Paint()..color = result['isGenuine'] ? Colors.green : Colors.red,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
+    }).toList();
+  }
 }

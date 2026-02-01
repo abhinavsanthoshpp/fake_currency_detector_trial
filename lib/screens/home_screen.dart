@@ -67,15 +67,12 @@ class _HomeScreenState extends State<HomeScreen>
         final recentScansList = DatabaseService.getAllScanResults();
         return HomeContent(
           onScanPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ScannerScreen(
-                  camera: widget.camera,
-                ),
-              ),
-            );
-          },
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ScannerScreen(),
+                              ),
+                            );          },
           recentScans: recentScansList,
         );
       case 2:
@@ -84,15 +81,12 @@ class _HomeScreenState extends State<HomeScreen>
         final recentScansList = DatabaseService.getAllScanResults();
         return HomeContent(
           onScanPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ScannerScreen(
-                  camera: widget.camera,
-                ),
-              ),
-            );
-          },
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const ScannerScreen(),
+                              ),
+                            );          },
           recentScans: recentScansList,
         );
     }
@@ -151,16 +145,12 @@ class _HomeScreenState extends State<HomeScreen>
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ScannerScreen(
-                  camera: widget.camera,
-                ),
+                builder: (context) => const ScannerScreen(),
               ),
             );
           } else {
-            if (!mounted) return;
             setState(() {
               _tabIndex = index;
-              _showResult = false; // hide result if user switches tabs
             });
           }
         },
