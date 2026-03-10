@@ -11,6 +11,7 @@ class ResultsScreen extends StatefulWidget {
   final VoidCallback? onBack;
   final List<Map<String, dynamic>> yoloResults;
   final bool isIntermediateResult;
+  final Map<String, dynamic>? threadVerificationResult;
 
   const ResultsScreen({
     Key? key,
@@ -18,6 +19,7 @@ class ResultsScreen extends StatefulWidget {
     this.onBack,
     required this.yoloResults,
     this.isIntermediateResult = false,
+    this.threadVerificationResult,
   }) : super(key: key);
 
   @override
@@ -34,10 +36,10 @@ class _ResultsScreenState extends State<ResultsScreen> {
   @override
   void initState() {
     super.initState();
-    _processYoloResults();
+    _processResults();
   }
 
-  void _processYoloResults() {
+  void _processResults() {
     if (widget.yoloResults.isEmpty) {
       return;
     }
@@ -49,19 +51,30 @@ class _ResultsScreenState extends State<ResultsScreen> {
       features[tag] = isGenuine ? 1.0 : 0.0;
     }
 
-    double totalScore = 0;
-    features.forEach((key, value) {
-      totalScore += value;
-    });
+    // --- SCORING LOGIC ---
+    double imageFeaturesScore = 0;
+    if (features.isNotEmpty) {
+      double sum = 0;
+      features.forEach((key, value) => sum += value);
+      imageFeaturesScore = sum / features.length;
+    }
+
+    double finalScore = 0;
+    if (widget.threadVerificationResult != null) {
+      double threadScore = widget.threadVerificationResult!['score'] ?? 0.0;
+      // BIG SCORE WEIGHTING: 60% Image Features + 40% Video Thread Verification
+      finalScore = (imageFeaturesScore * 0.6) + (threadScore * 0.4);
+      
+      // Add thread result to feature list for display
+      features['security_thread_dynamic'] = threadScore;
+    } else {
+      finalScore = imageFeaturesScore;
+    }
 
     setState(() {
       securityFeatures = features;
-      if (features.isNotEmpty) {
-        overallScore = totalScore / features.length;
-      }
+      overallScore = finalScore;
       
-      // Determine overall currency type and status from YOLO results.
-      // This is a simple logic, can be improved.
       final uniqueTags = widget.yoloResults.map((r) => r['tag'].split('_').first).toSet();
       currencyType = uniqueTags.join(', ');
       resultStatus = overallScore > 0.7 ? "Authentic" : "Suspicious";

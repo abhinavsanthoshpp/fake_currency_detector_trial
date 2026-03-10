@@ -27,9 +27,40 @@ class ThreadVerifierService {
         useGpu: false);
   }
 
-  Future<String> analyzeVideo(String videoPath) async {
+  Future<Map<String, dynamic>> analyzeVideo(String videoPath) async {
+    print("🎬 Service: Starting frame extraction in main isolate...");
+    
+    // 1. Setup temporary directory for frames
+    final Directory tempDir = await getTemporaryDirectory();
+    final String framesDirPath = '${tempDir.path}/video_frames';
+    if (await Directory(framesDirPath).exists()) {
+      await Directory(framesDirPath).delete(recursive: true);
+    }
+    await Directory(framesDirPath).create(recursive: true);
+
+    // 2. Extract frames using FFmpeg (Must be in main isolate)
+    // Adjusted FPS to 1.5 for 10s video = 15 frames total
+    final String ffmpegCommand =
+        '-i "$videoPath" -vf "fps=1.5,scale=640:-1" -q:v 2 "$framesDirPath/frame_%04d.jpg"';
+    
+    final session = await FFmpegKit.execute(ffmpegCommand);
+    final returnCode = await session.getReturnCode();
+
+    if (!ReturnCode.isSuccess(returnCode)) {
+      print("🎬 Service: FFmpeg extraction failed ❌");
+      return {
+        "score": 0.0,
+        "label": "ERROR",
+        "message": "Error: Video processing failed."
+      };
+    }
+    print("🎬 Service: Extraction complete. Offloading ML to background isolate...");
+
     final token = RootIsolateToken.instance!;
     return await compute(
-        analyzeVideoInIsolate, {'path': videoPath, 'token': token});
+        analyzeVideoInIsolate, {
+          'framesPath': framesDirPath, 
+          'token': token
+        }) as Map<String, dynamic>;
   }
 }

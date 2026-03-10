@@ -29,6 +29,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
   List<Map<String, dynamic>> yoloResults = [];
   bool isProcessing = false;
   String? videoVerdict;
+  bool isRecording = false;
+  XFile? recordedVideoFile;
+
+  // Store results between steps
+  List<Map<String, dynamic>> _stage1Results = [];
+  String? _stage1ImagePath;
 
   @override
   void initState() {
@@ -99,10 +105,27 @@ class _ScannerScreenState extends State<ScannerScreen> {
                     onPressed: isProcessing ? null : _captureAndAnalyzeImage,
                     child: const Text('Step 1: Verify Image'),
                   ),
-                if (verificationStep == 2)
+                if (verificationStep == 2 && !isRecording)
                   ElevatedButton(
-                    onPressed: isProcessing ? null : _startVideoVerification,
-                    child: const Text('Step 2: Verify Thread'),
+                    onPressed: isProcessing ? null : _startRecording,
+                    child: const Text('Step 2: Record Thread Video'),
+                  ),
+                if (isRecording)
+                  ElevatedButton(
+                    onPressed: _stopRecording,
+                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                    child: const Text('Stop Recording'),
+                  ),
+                if (verificationStep == 3 && recordedVideoFile != null)
+                  ElevatedButton(
+                    onPressed: isProcessing ? null : _processRecordedVideo,
+                    child: isProcessing 
+                      ? const SizedBox(
+                          height: 20, 
+                          width: 20, 
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)
+                        )
+                      : const Text('Step 3: Analyze Thread Video'),
                   ),
               ],
             ),
@@ -167,6 +190,9 @@ class _ScannerScreenState extends State<ScannerScreen> {
       verifiedResults.add(result);
     }
 
+    _stage1Results = verifiedResults;
+    _stage1ImagePath = image.path;
+
     // Set orientation to portrait before showing results
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
@@ -191,7 +217,10 @@ class _ScannerScreenState extends State<ScannerScreen> {
     ]);
 
     if (shouldProceed == true) {
-      _startVideoVerification();
+      setState(() {
+        verificationStep = 2; // Move to video step but wait for user to press record
+        isProcessing = false;
+      });
     } else {
       setState(() {
         isProcessing = false;
@@ -199,29 +228,68 @@ class _ScannerScreenState extends State<ScannerScreen> {
     }
   }
 
-  Future<void> _startVideoVerification() async {
+  Future<void> _startRecording() async {
     setState(() {
-      verificationStep = 3;
+      isRecording = true;
     });
-    await _captureAndAnalyzeVideo();
+    await cameraController.startVideoRecording();
+    // Auto-stop after 10 seconds as requested
+    Future.delayed(const Duration(seconds: 10), () {
+      if (isRecording) {
+        _stopRecording();
+      }
+    });
   }
 
-  Future<void> _captureAndAnalyzeVideo() async {
+  Future<void> _stopRecording() async {
+    final videoFile = await cameraController.stopVideoRecording();
+    setState(() {
+      isRecording = false;
+      recordedVideoFile = videoFile;
+      verificationStep = 3; // Ready to process
+    });
+  }
+
+  Future<void> _processRecordedVideo() async {
+    if (recordedVideoFile == null) return;
+
     setState(() {
       isProcessing = true;
     });
 
-    await cameraController.startVideoRecording();
-    await Future.delayed(const Duration(seconds: 15));
-    final videoFile = await cameraController.stopVideoRecording();
-
-    final verdict = await threadVerifierService.analyzeVideo(videoFile.path);
+    final threadResult = await threadVerifierService.analyzeVideo(recordedVideoFile!.path);
 
     setState(() {
-      videoVerdict = verdict;
+      videoVerdict = threadResult['message'];
       isProcessing = false;
       verificationStep = 4;
     });
+
+    // Navigate to FINAL Results Screen
+    if (mounted) {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ResultsScreen(
+            imagePath: _stage1ImagePath,
+            yoloResults: _stage1Results,
+            threadVerificationResult: threadResult,
+            isIntermediateResult: false,
+          ),
+        ),
+      );
+
+      // Return to landscape if they come back
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeRight,
+        DeviceOrientation.landscapeLeft,
+      ]);
+    }
   }
 
   List<Widget> displayBoxes(Size screen) {
