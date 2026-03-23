@@ -22,13 +22,16 @@ class ScanResultAdapter extends TypeAdapter<ScanResult> {
       confidenceLevel: fields[2] as double,
       dateTime: fields[3] as DateTime,
       imagePath: fields[4] as String?,
+      backImagePath: fields[5] as String?,
+      yoloResults: (fields[6] as List?)?.map((e) => Map<String, dynamic>.from(e)).toList(),
+      threadMetrics: fields[7] != null ? Map<String, dynamic>.from(fields[7]) : null,
     );
   }
 
   @override
   void write(BinaryWriter writer, ScanResult obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.currencyType)
       ..writeByte(1)
@@ -38,7 +41,13 @@ class ScanResultAdapter extends TypeAdapter<ScanResult> {
       ..writeByte(3)
       ..write(obj.dateTime)
       ..writeByte(4)
-      ..write(obj.imagePath);
+      ..write(obj.imagePath)
+      ..writeByte(5)
+      ..write(obj.backImagePath)
+      ..writeByte(6)
+      ..write(obj.yoloResults)
+      ..writeByte(7)
+      ..write(obj.threadMetrics);
   }
 
   @override

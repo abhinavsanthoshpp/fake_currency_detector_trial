@@ -33,8 +33,13 @@ class _ScannerScreenState extends State<ScannerScreen> {
   XFile? recordedVideoFile;
 
   // Store results between steps
-  List<Map<String, dynamic>> _stage1Results = [];
-  String? _stage1ImagePath;
+  List<Map<String, dynamic>> _stage1FrontResults = [];
+  List<Map<String, dynamic>> _stage1BackResults = [];
+  String? _stage1FrontImagePath;
+  String? _stage1BackImagePath;
+  
+  bool get _hasFront => _stage1FrontImagePath != null;
+  bool get _hasBack => _stage1BackImagePath != null;
 
   @override
   void initState() {
@@ -100,11 +105,24 @@ class _ScannerScreenState extends State<ScannerScreen> {
             bottom: 20,
             child: Column(
               children: [
-                if (verificationStep == 1)
-                  ElevatedButton(
-                    onPressed: isProcessing ? null : _captureAndAnalyzeImage,
-                    child: const Text('Step 1: Verify Image'),
-                  ),
+                if (verificationStep == 1) ...[
+                  if (!_hasFront)
+                    ElevatedButton(
+                      onPressed: isProcessing ? null : () => _captureAndAnalyzeSide(true),
+                      child: const Text('Capture Front Side'),
+                    ),
+                  if (_hasFront && !_hasBack)
+                    ElevatedButton(
+                      onPressed: isProcessing ? null : () => _captureAndAnalyzeSide(false),
+                      child: const Text('Capture Back Side'),
+                    ),
+                  if (_hasFront && _hasBack)
+                    ElevatedButton(
+                      onPressed: isProcessing ? null : _showCombinedResults,
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                      child: const Text('See Step 1 Results'),
+                    ),
+                ],
                 if (verificationStep == 2 && !isRecording)
                   ElevatedButton(
                     onPressed: isProcessing ? null : _startRecording,
@@ -155,7 +173,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
     );
   }
 
-  Future<void> _captureAndAnalyzeImage() async {
+  Future<void> _captureAndAnalyzeSide(bool isFront) async {
     setState(() {
       isProcessing = true;
     });
@@ -190,8 +208,24 @@ class _ScannerScreenState extends State<ScannerScreen> {
       verifiedResults.add(result);
     }
 
-    _stage1Results = verifiedResults;
-    _stage1ImagePath = image.path;
+    setState(() {
+      if (isFront) {
+        _stage1FrontResults = verifiedResults;
+        _stage1FrontImagePath = image.path;
+      } else {
+        _stage1BackResults = verifiedResults;
+        _stage1BackImagePath = image.path;
+      }
+      isProcessing = false;
+    });
+  }
+
+  Future<void> _showCombinedResults() async {
+    // Combine all YOLO features from both sides for scoring
+    final List<Map<String, dynamic>> combinedResults = [
+      ..._stage1FrontResults,
+      ..._stage1BackResults,
+    ];
 
     // Set orientation to portrait before showing results
     await SystemChrome.setPreferredOrientations([
@@ -199,12 +233,17 @@ class _ScannerScreenState extends State<ScannerScreen> {
       DeviceOrientation.portraitDown,
     ]);
 
+    if (!mounted) return;
+    
     final shouldProceed = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (context) => ResultsScreen(
-          imagePath: image.path,
-          yoloResults: verifiedResults,
+          imagePath: _stage1FrontImagePath,
+          backImagePath: _stage1BackImagePath,
+          yoloResults: combinedResults,
+          frontResults: _stage1FrontResults,
+          backResults: _stage1BackResults,
           isIntermediateResult: true,
         ),
       ),
@@ -218,7 +257,7 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
     if (shouldProceed == true) {
       setState(() {
-        verificationStep = 2; // Move to video step but wait for user to press record
+        verificationStep = 2; // Move to video step
         isProcessing = false;
       });
     } else {
@@ -267,6 +306,12 @@ class _ScannerScreenState extends State<ScannerScreen> {
 
     // Navigate to FINAL Results Screen
     if (mounted) {
+      // Combine all Stage 1 features again
+      final List<Map<String, dynamic>> combinedResults = [
+        ..._stage1FrontResults,
+        ..._stage1BackResults,
+      ];
+
       await SystemChrome.setPreferredOrientations([
         DeviceOrientation.portraitUp,
         DeviceOrientation.portraitDown,
@@ -276,8 +321,11 @@ class _ScannerScreenState extends State<ScannerScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => ResultsScreen(
-            imagePath: _stage1ImagePath,
-            yoloResults: _stage1Results,
+            imagePath: _stage1FrontImagePath,
+            backImagePath: _stage1BackImagePath,
+            yoloResults: combinedResults,
+            frontResults: _stage1FrontResults,
+            backResults: _stage1BackResults,
             threadVerificationResult: threadResult,
             isIntermediateResult: false,
           ),

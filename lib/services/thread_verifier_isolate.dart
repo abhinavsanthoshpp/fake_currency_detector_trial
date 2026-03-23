@@ -172,25 +172,35 @@ Map<String, dynamic> generateVerdict(List<Map<String, dynamic>> records) {
   print("THREAD ANALYSIS: SatVar: $satVar, ValVar: $valVar, HueRange: $hueRange, HueMax: $hueMax, HueStd: $hueStd");
 
   // ---- FINAL DECISION LOGIC (Improved for "Big Score" weighting) ----
+  Map<String, dynamic> verdict;
   if (satVar > 15 && valVar > 12 && hueRange > 10 && hueMax > 80 && hueStd > 2.5) {
-    return {
+    verdict = {
       "score": 1.0,
       "label": "AUTHENTIC",
       "message": "AUTHENTIC (Optical + chromatic shift detected)"
     };
   } else if (satVar > 10 && valVar > 8 && hueRange > 5) {
-    return {
+    verdict = {
       "score": 0.6,
       "label": "LIKELY_AUTHENTIC",
       "message": "LIKELY AUTHENTIC (Weak optical response)"
     };
   } else {
-    return {
+    verdict = {
       "score": 0.2,
       "label": "FAKE",
       "message": "STATIC / PRINTED INK (FAKE)"
     };
   }
+
+  // Add raw metrics for UI display
+  verdict["metrics"] = {
+    "saturation_shift": satVar.toStringAsFixed(1),
+    "value_shift": valVar.toStringAsFixed(1),
+    "hue_range": hueRange.toStringAsFixed(1),
+  };
+  
+  return verdict;
 }
 
 double calculateStdDev(List<double> data) {

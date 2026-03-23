@@ -19,15 +19,26 @@ class ScanResult extends HiveObject {
   @HiveField(4)
   String? imagePath;
 
+  @HiveField(5)
+  String? backImagePath;
+
+  @HiveField(6)
+  List<Map<String, dynamic>>? yoloResults; // Store all features
+
+  @HiveField(7)
+  Map<String, dynamic>? threadMetrics; // Store optical metrics
+
   ScanResult({
     required this.currencyType,
     required this.resultStatus,
     required this.confidenceLevel,
     required this.dateTime,
     this.imagePath,
+    this.backImagePath,
+    this.yoloResults,
+    this.threadMetrics,
   });
 
-  // Format date exactly like your existing hardcoded strings
   String get formattedDate {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
@@ -37,13 +48,12 @@ class ScanResult extends HiveObject {
     } else if (difference.inDays == 1) {
       return 'Yesterday, ${_formatTime(dateTime)}';
     } else {
-      return 'Oct ${dateTime.day}, ${_formatTime(dateTime)}';
+      return '${dateTime.day}/${dateTime.month}/${dateTime.year}, ${_formatTime(dateTime)}';
     }
   }
 
   String _formatTime(DateTime time) {
-    final hour =
-        time.hour == 0 ? 12 : (time.hour > 12 ? time.hour - 12 : time.hour);
+    final hour = time.hour == 0 ? 12 : (time.hour > 12 ? time.hour - 12 : time.hour);
     final minute = time.minute.toString().padLeft(2, '0');
     final period = time.hour >= 12 ? 'PM' : 'AM';
     return '$hour:$minute $period';

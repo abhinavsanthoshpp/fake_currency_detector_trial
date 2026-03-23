@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../utils/constants.dart';
-import '../screens/results_screen.dart';
 import '../l10n/app_localizations.dart';
 import '../database/scan_result.dart';
 import '../screens/history_screen.dart';
@@ -165,7 +164,6 @@ class HomeContent extends StatelessWidget {
   }
 
   Widget _buildRecentScans(BuildContext context) {
-    // Show message if no recent scans
     if (recentScans.isEmpty) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,15 +192,6 @@ class HomeContent extends StatelessWidget {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  AppLocalizations.of(context)!.startScanning,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textGray,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
               ],
             ),
           ),
@@ -218,79 +207,58 @@ class HomeContent extends StatelessWidget {
           style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        // Dynamically show recent scans from the list (max 3 for home screen)
         for (final scan in recentScans.take(3))
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: _buildScanItem(
-              currency: scan.currencyType,
-              time: scan.formattedDate,
-              status: scan.resultStatus,
-              isAuthentic:
-                  scan.resultStatus == AppLocalizations.of(context)!.authentic,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ResultsScreen(
-                      imagePath: scan.imagePath,
-                      yoloResults: [], // Add this line
-                    ),
-                  ),
-                );
-              },
-            ),
+            child: _buildSimpleScanItem(context, scan),
           ),
-        if (recentScans.isNotEmpty)
-          Align(
-            alignment: Alignment.centerRight,
-            child: TextButton(
-              onPressed: () {
-                // Navigate to History tab (assuming bottom nav index 2)
-                // You might need to adjust this based on your navigation setup
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const HistoryScreen()),
-                );
-              },
-              child: Text(AppLocalizations.of(context)!.viewAll),
-            ),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const HistoryScreen()),
+              );
+            },
+            child: Text(AppLocalizations.of(context)!.viewAll),
           ),
+        ),
       ],
     );
   }
 
-  Widget _buildScanItem({
-    required String currency,
-    required String time,
-    required String status,
-    required bool isAuthentic,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
+  Widget _buildSimpleScanItem(BuildContext context, ScanResult scan) {
+    final bool isAuthentic = scan.resultStatus == "Authentic";
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => HistoryDetailScreen(result: scan),
+          ),
+        );
+      },
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
+          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.05), spreadRadius: 1, blurRadius: 4)],
         ),
         child: Row(
           children: [
             Container(
-              width: 48,
-              height: 48,
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: isAuthentic
-                    ? AppColors.successGreenLight
-                    : AppColors.errorRedLight,
+                color: isAuthentic ? AppColors.successGreenLight : AppColors.errorRedLight,
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                isAuthentic ? Icons.check_circle : Icons.warning_amber,
-                color:
-                    isAuthentic ? AppColors.successGreen : AppColors.errorRed,
+                isAuthentic ? Icons.verified : Icons.warning,
+                color: isAuthentic ? AppColors.successGreen : AppColors.errorRed,
+                size: 20,
               ),
             ),
             const SizedBox(width: 16),
@@ -299,40 +267,18 @@ class HomeContent extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    currency,
-                    style: const TextStyle(
+                    scan.resultStatus,
+                    style: TextStyle(
                       fontSize: 16,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.bold,
+                      color: isAuthentic ? AppColors.successGreen : AppColors.errorRed,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    time,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
-                    ),
-                  ),
+                  Text(scan.formattedDate, style: const TextStyle(fontSize: 12, color: AppColors.textGray)),
                 ],
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: isAuthentic
-                    ? AppColors.successGreenLight
-                    : AppColors.errorRedLight,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                status,
-                style: TextStyle(
-                  color:
-                      isAuthentic ? AppColors.successGreen : AppColors.errorRed,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
+            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
           ],
         ),
       ),
